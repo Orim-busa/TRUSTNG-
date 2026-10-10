@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+.env
+.env.*
+!.env.example
+trustng_audit_log.json
+trustng_audit_log.json.tmp
+main.py.backup*
