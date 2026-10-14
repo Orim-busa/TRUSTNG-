@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 AUTHORIZATION_EXPIRY_MINUTES = 5
@@ -170,7 +170,11 @@ def validate_execution(
                 )
             )
 
-            if datetime.utcnow() > expires_at:
+            if (
+                    expires_at.replace(tzinfo=timezone.utc)
+                    if expires_at.tzinfo is None
+                    else expires_at
+                ) < datetime.now(timezone.utc):
                 failures.append(
                     "Authorization has expired"
                 )

@@ -7,3 +7,6 @@ __pycache__/
 trustng_audit_log.json
 trustng_audit_log.json.tmp
 main.py.backup*
+
+# Local backup files
+*.bak

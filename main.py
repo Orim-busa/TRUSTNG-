@@ -1,5 +1,8 @@
 import os
 import secrets
+from contextlib import asynccontextmanager
+
+import database
 
 from fastapi import FastAPI, Header, HTTPException
 
@@ -17,7 +20,8 @@ from behavioral_anomaly import analyze_behavioral_anomaly
 from idempotency import (
     check_transaction,
     check_transaction_integrity,
-    store_transaction
+    store_transaction,
+    database_mode_enabled,
 )
 
 from fraud_cases import (
@@ -43,10 +47,18 @@ from trust_graph import (
 )
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if database_mode_enabled():
+        database.initialize_database()
+    yield
+
+
 app = FastAPI(
     title="TrustNG",
     description="TrustNG transaction risk and policy infrastructure",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 
