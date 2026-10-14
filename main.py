@@ -483,10 +483,23 @@ def verify_audit_integrity():
 
 @app.get("/v1/health")
 def developer_api_health():
+    database_status = "not_configured"
+
+    if database_mode_enabled():
+        try:
+            database_status = (
+                "connected"
+                if database.check_database_connection()
+                else "unavailable"
+            )
+        except Exception:
+            database_status = "unavailable"
+
     return {
         "service": "TrustNG Developer API",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "database": database_status,
     }
 
 
