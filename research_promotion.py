@@ -57,7 +57,7 @@ def promote_candidate(candidate_id):
         source_url=source_url,
         source_region=candidate["source_region"],
         source_type="externally_collected_research",
-        evidence_strength="strong",
+        evidence_strength="moderate",
         relevance_to_trustng=candidate["trustng_relevance"],
         limitations=(
             "Human review is recorded, but relevance and conclusions "

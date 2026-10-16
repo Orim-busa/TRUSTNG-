@@ -9,6 +9,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import database
 import dashboard_service
+import research_promotion
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
@@ -133,6 +134,21 @@ def review_research_candidate(
             reviewer=review.reviewer,
             notes=review.notes,
         )
+    except ValueError as exc:
+        status_code = (
+            404 if str(exc) == "Unknown research candidate." else 400
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail=str(exc),
+        ) from exc
+
+
+@app.post("/v1/research/candidates/{candidate_id}/promote")
+def promote_research_candidate(candidate_id: str):
+    """Promote eligible research after human review and verification."""
+    try:
+        return research_promotion.promote_candidate(candidate_id)
     except ValueError as exc:
         status_code = (
             404 if str(exc) == "Unknown research candidate." else 400
