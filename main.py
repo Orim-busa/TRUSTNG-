@@ -1,12 +1,20 @@
 import os
 import secrets
 from contextlib import asynccontextmanager
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import database
+import dashboard_service
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.responses import HTMLResponse
+from pathlib import Path
 
-from models import Transaction
+from models import Transaction, ResearchCandidateReview
 from risk_engine import analyze_transaction
 from policy_engine import evaluate_transaction
 from restriction_engine import create_restriction
@@ -16,6 +24,7 @@ from authorization_engine import create_authorization
 from execution_gate import validate_execution
 from transaction_executor import execute_transaction
 from behavioral_anomaly import analyze_behavioral_anomaly
+from ai_risk_engine import analyze_transaction_with_ai
 
 from idempotency import (
     check_transaction,
@@ -69,6 +78,81 @@ def home():
         "status": "running",
         "version": "1.0.0"
     }
+
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def browser_dashboard():
+    page = Path(__file__).with_name("dashboard.html")
+    return HTMLResponse(
+        content=page.read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/v1/dashboard/summary")
+def dashboard_summary():
+    """Read-only operational and research summary."""
+    return dashboard_service.dashboard_summary()
+
+
+@app.get("/v1/dashboard/research")
+def dashboard_research(limit: int = 50):
+    """Read-only ranked research candidates."""
+    if not 1 <= limit <= 200:
+        raise HTTPException(
+            status_code=400,
+            detail="limit must be between 1 and 200.",
+        )
+
+    candidates = dashboard_service.research_collector.list_candidates()
+    ranked = dashboard_service.research_analyzer.rank_candidates(
+        candidates,
+        include_reviewed=True,
+    )
+    return {
+        "total": len(ranked),
+        "items": ranked[:limit],
+        "ranking_is_independent_verification": False,
+    }
+
+
+
+@app.post("/v1/research/candidates/{candidate_id}/review")
+def review_research_candidate(
+    candidate_id: str,
+    review: ResearchCandidateReview,
+):
+    """Record a human review without triggering promotion or implementation."""
+    try:
+        return dashboard_service.research_collector.mark_candidate_reviewed(
+            candidate_id,
+            evidence_status=review.evidence_status,
+            trustng_relevance=review.trustng_relevance,
+            lesson_for_africa=review.lesson_for_africa,
+            reviewer=review.reviewer,
+            notes=review.notes,
+        )
+    except ValueError as exc:
+        status_code = (
+            404 if str(exc) == "Unknown research candidate." else 400
+        )
+        raise HTTPException(
+            status_code=status_code,
+            detail=str(exc),
+        ) from exc
+
+
+@app.get("/v1/dashboard/proposals")
+def dashboard_proposals():
+    """Read-only list of improvement proposals."""
+    return dashboard_service.continuous_intelligence.list_proposals()
+
+
+@app.get("/v1/dashboard/benchmarks")
+def dashboard_benchmarks():
+    """Read-only list of architecture benchmarks."""
+    return dashboard_service.architecture_benchmark.list_benchmarks()
 
 
 @app.post("/evaluate")
@@ -192,6 +276,16 @@ def evaluate(transaction: Transaction):
         beneficiary_profile
     )
 
+    ai_assessment = analyze_transaction_with_ai(
+        transaction=transaction,
+        risk_signals=risk_signals,
+        behavioral_anomalies=None,
+        relationship_risk=None,
+        transaction_history=None,
+        transaction_velocity=None,
+        trust_result=trust_result
+    )
+
     decision = evaluate_transaction(
         transaction,
         risk_signals,
@@ -311,6 +405,8 @@ def evaluate(transaction: Transaction):
         "risk_signals": risk_signals,
 
         "trust": trust_result,
+
+        "ai_assessment": ai_assessment,
 
         "decision": decision,
 
@@ -546,6 +642,7 @@ async def protect_internal_routes(request, call_next):
     public_paths = {
         "/",
         "/v1/health",
+        "/dashboard",
         "/docs",
         "/openapi.json",
         "/redoc",

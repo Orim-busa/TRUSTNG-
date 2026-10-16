@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def _normalize_level(level):
@@ -9,21 +9,19 @@ def _normalize_level(level):
 
 
 def _calculate_ai_score(
-    risk_signals,
-    behavioral_anomalies,
-    relationship_risk,
-    transaction_history,
-    transaction_velocity,
-    trust_result
+    risk_signals=None,
+    behavioral_anomalies=None,
+    relationship_risk=None,
+    transaction_history=None,
+    transaction_velocity=None,
+    trust_result=None
 ):
     score = 0
 
-    # ----------------------------------------
-    # 1. Base risk signals
-    # ----------------------------------------
-
     for signal in risk_signals or []:
-        severity = _normalize_level(signal.get("severity"))
+        severity = _normalize_level(
+            signal.get("severity")
+        )
 
         if severity == "HIGH":
             score += 35
@@ -32,12 +30,10 @@ def _calculate_ai_score(
         elif severity == "LOW":
             score += 5
 
-    # ----------------------------------------
-    # 2. Behavioral anomalies
-    # ----------------------------------------
-
     for anomaly in behavioral_anomalies or []:
-        severity = _normalize_level(anomaly.get("severity"))
+        severity = _normalize_level(
+            anomaly.get("severity")
+        )
 
         if severity == "HIGH":
             score += 30
@@ -46,67 +42,55 @@ def _calculate_ai_score(
         elif severity == "LOW":
             score += 5
 
-    # ----------------------------------------
-    # 3. Relationship / graph risk
-    # ----------------------------------------
+    if relationship_risk:
+        level = _normalize_level(
+            relationship_risk.get("risk_level")
+        )
 
-    relationship_level = _normalize_level(
-        (relationship_risk or {}).get("risk_level")
-    )
+        if level == "HIGH":
+            score += 35
+        elif level == "MEDIUM":
+            score += 20
+        elif level == "LOW":
+            score += 5
 
-    if relationship_level == "HIGH":
-        score += 35
-    elif relationship_level == "MEDIUM":
-        score += 20
-    elif relationship_level == "LOW":
-        score += 5
+    if transaction_history:
+        level = _normalize_level(
+            transaction_history.get("risk_level")
+        )
 
-    # ----------------------------------------
-    # 4. Transaction history
-    # ----------------------------------------
+        if level == "HIGH":
+            score += 25
+        elif level == "MEDIUM":
+            score += 15
+        elif level == "LOW":
+            score += 5
 
-    history_level = _normalize_level(
-        (transaction_history or {}).get("risk_level")
-    )
+    if transaction_velocity:
+        level = _normalize_level(
+            transaction_velocity.get("risk_level")
+        )
 
-    if history_level == "HIGH":
-        score += 25
-    elif history_level == "MEDIUM":
-        score += 15
-    elif history_level == "LOW":
-        score += 5
+        if level == "HIGH":
+            score += 30
+        elif level == "MEDIUM":
+            score += 15
+        elif level == "LOW":
+            score += 5
 
-    # ----------------------------------------
-    # 5. Transaction velocity
-    # ----------------------------------------
+    if trust_result:
+        level = _normalize_level(
+            trust_result.get("trust_level")
+        )
 
-    velocity_level = _normalize_level(
-        (transaction_velocity or {}).get("risk_level")
-    )
+        if level == "LOW":
+            score += 30
+        elif level == "MEDIUM":
+            score += 15
+        elif level == "HIGH":
+            score -= 10
 
-    if velocity_level == "HIGH":
-        score += 30
-    elif velocity_level == "MEDIUM":
-        score += 15
-    elif velocity_level == "LOW":
-        score += 5
-
-    # ----------------------------------------
-    # 6. Beneficiary trust
-    # ----------------------------------------
-
-    trust_level = _normalize_level(
-        (trust_result or {}).get("trust_level")
-    )
-
-    if trust_level == "LOW":
-        score += 30
-    elif trust_level == "MEDIUM":
-        score += 15
-    elif trust_level == "HIGH":
-        score -= 10
-
-    return max(0, min(score, 100))
+    return max(0, min(100, score))
 
 
 def _determine_risk_level(score):
@@ -120,63 +104,80 @@ def _determine_risk_level(score):
 
 
 def _build_reasons(
-    risk_signals,
-    behavioral_anomalies,
-    relationship_risk,
-    transaction_history,
-    transaction_velocity,
-    trust_result
+    risk_signals=None,
+    behavioral_anomalies=None,
+    relationship_risk=None,
+    transaction_history=None,
+    transaction_velocity=None,
+    trust_result=None
 ):
     reasons = []
 
     for signal in risk_signals or []:
-        severity = _normalize_level(signal.get("severity"))
+        severity = _normalize_level(
+            signal.get("severity")
+        )
 
-        if severity in ["HIGH", "MEDIUM"]:
+        if severity in ("HIGH", "MEDIUM"):
             message = signal.get("message")
 
             if message:
                 reasons.append(message)
 
     for anomaly in behavioral_anomalies or []:
-        severity = _normalize_level(anomaly.get("severity"))
+        severity = _normalize_level(
+            anomaly.get("severity")
+        )
 
-        if severity in ["HIGH", "MEDIUM"]:
+        if severity in ("HIGH", "MEDIUM"):
             message = anomaly.get("message")
 
             if message:
                 reasons.append(message)
 
-    relationship_message = (relationship_risk or {}).get("message")
-
-    if relationship_message:
-        reasons.append(relationship_message)
-
-    history_message = (transaction_history or {}).get("message")
-
-    if history_message:
-        reasons.append(history_message)
-
-    velocity_message = (transaction_velocity or {}).get("message")
-
-    if velocity_message:
-        reasons.append(velocity_message)
-
-    trust_level = _normalize_level(
-        (trust_result or {}).get("trust_level")
-    )
-
-    if trust_level == "LOW":
-        reasons.append(
-            "Beneficiary trust level is LOW"
+    if relationship_risk:
+        level = _normalize_level(
+            relationship_risk.get("risk_level")
         )
 
-    elif trust_level == "MEDIUM":
-        reasons.append(
-            "Beneficiary trust level is MEDIUM"
+        if level in ("HIGH", "MEDIUM"):
+            message = relationship_risk.get("message")
+
+            if message:
+                reasons.append(message)
+
+    if transaction_history:
+        level = _normalize_level(
+            transaction_history.get("risk_level")
         )
 
-    # Remove duplicate reasons while preserving order.
+        if level in ("HIGH", "MEDIUM"):
+            message = transaction_history.get("message")
+
+            if message:
+                reasons.append(message)
+
+    if transaction_velocity:
+        level = _normalize_level(
+            transaction_velocity.get("risk_level")
+        )
+
+        if level in ("HIGH", "MEDIUM"):
+            message = transaction_velocity.get("message")
+
+            if message:
+                reasons.append(message)
+
+    if trust_result:
+        level = _normalize_level(
+            trust_result.get("trust_level")
+        )
+
+        if level in ("LOW", "MEDIUM"):
+            reasons.append(
+                f"Beneficiary trust level is {level}"
+            )
+
     unique_reasons = []
 
     for reason in reasons:
@@ -209,14 +210,14 @@ def analyze_transaction_with_ai(
     trust_result=None
 ):
     """
-    TrustNG AI Risk Intelligence Engine.
+    TrustNG rule-weighted risk intelligence engine.
 
-    This component does NOT execute, authorize,
-    restrict, or release money.
+    This engine produces an advisory risk assessment.
+    It does not authorize, execute, restrict, or release
+    funds, and it cannot override TrustNG policy.
 
-    It analyzes evidence produced by TrustNG's
-    security systems and produces an AI-style
-    risk assessment and recommendation.
+    Confidence is not statistically calibrated because
+    this version does not use a trained predictive model.
     """
 
     score = _calculate_ai_score(
@@ -244,33 +245,26 @@ def analyze_transaction_with_ai(
         reasons=reasons
     )
 
-    if risk_level == "HIGH":
-        confidence = "HIGH"
-    elif risk_level == "MEDIUM":
-        confidence = "MEDIUM"
-    else:
-        confidence = "LOW"
-
     return {
         "engine": "TrustNG-AI-Risk-Intelligence",
         "version": "1.0",
-        "analyzed_at": datetime.utcnow().isoformat(),
-
+        "analyzed_at": datetime.now(
+            timezone.utc
+        ).isoformat(),
         "transaction_id": transaction.transaction_id,
-
         "ai_risk_score": score,
         "ai_risk_level": risk_level,
-        "confidence": confidence,
-
+        "confidence": None,
+        "confidence_status": "NOT_CALIBRATED",
         "reasons": reasons,
-
         "recommendation": recommendation,
-
         "authority": {
             "can_authorize_transaction": False,
             "can_execute_transaction": False,
             "can_release_funds": False,
             "can_override_policy": False,
-            "final_decision_owner": "TrustNG-Policy-and-Authorization-Layers"
+            "final_decision_owner": (
+                "TrustNG-Policy-and-Authorization-Layers"
+            )
         }
     }

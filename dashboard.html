@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TrustNG | Intelligence Dashboard</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#151d31;--line:#293650;--text:#edf2ff;--muted:#a5b1c8;--accent:#70a5ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,sans-serif}
+header,main{max-width:1150px;margin:auto;padding:22px}
+header{border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:27px}h2{font-size:18px;margin-top:0}
+p,.muted{color:var(--muted)}
+.panel,.metric{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px;margin:16px 0}
+.metric strong{display:block;font-size:26px;margin-top:8px}
+input,button{padding:11px;border-radius:8px;border:1px solid var(--line);font:inherit}
+input{background:#0b1020;color:var(--text);width:min(100%,430px)}
+button{background:var(--accent);color:#071326;font-weight:700;cursor:pointer}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#d6e2ff}
+table{width:100%;border-collapse:collapse;display:block;overflow-x:auto}
+th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid var(--line);min-width:130px}
+section{margin:20px 0}
+.status{padding:10px 0;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1>TrustNG Intelligence</h1>
+  <p>Risk infrastructure · Research monitoring · Read-only dashboard</p>
+</header>
+<main>
+  <section class="panel">
+    <h2>Connect to TrustNG</h2>
+    <p>Your API key is used in memory only while this page remains open. It is not saved in browser storage.</p>
+    <input id="api-key" type="password" autocomplete="off" placeholder="Enter TrustNG API key">
+    <button id="connect">Connect</button>
+    <button id="disconnect" type="button">Disconnect</button>
+    <div id="status" class="status" role="status">Not connected.</div>
+  </section>
+
+  <section>
+    <h2>System overview</h2>
+    <div class="grid" id="metrics"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Safety controls</h2>
+    <pre id="safeguards">Connect to load current safeguards.</pre>
+  </section>
+
+  <section class="panel">
+    <h2>Currency and economic indicators</h2>
+    <pre id="economics">Live currency and economic data are not yet connected to this dashboard.</pre>
+  </section>
+
+  <section class="panel">
+    <h2>Research candidates</h2>
+    <p>Ranking is a triage aid, not independent verification.</p>
+    <div id="research">Connect to load candidates.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Improvement proposals</h2>
+    <pre id="proposals">Connect to load proposals.</pre>
+  </section>
+
+  <section class="panel">
+    <h2>Architecture benchmarks</h2>
+    <pre id="benchmarks">Connect to load benchmarks.</pre>
+  </section>
+</main>
+<script>
+(() => {
+  let apiKey = "";
+  const $ = id => document.getElementById(id);
+  const show = (id, value) => { $(id).textContent = value; };
+
+  async function getJSON(path) {
+    const response = await fetch(path, {
+      headers: {"X-API-Key": apiKey},
+      cache: "no-store"
+    });
+    if (!response.ok) {
+      throw new Error(path + " returned HTTP " + response.status);
+    }
+    return response.json();
+  }
+
+  function metric(label, value) {
+    const card = document.createElement("div");
+    card.className = "metric";
+    const title = document.createElement("span");
+    title.className = "muted";
+    title.textContent = label;
+    const number = document.createElement("strong");
+    number.textContent = value ?? "—";
+    card.append(title, number);
+    $("metrics").append(card);
+  }
+
+  function renderResearch(data) {
+    const host = $("research");
+    host.replaceChildren();
+    const items = data.items || [];
+    if (!items.length) {
+      host.textContent = "No research candidates returned.";
+      return;
+    }
+    const table = document.createElement("table");
+    const head = document.createElement("tr");
+    ["Candidate", "Priority", "Status", "Source"].forEach(label => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      head.append(th);
+    });
+    const thead = document.createElement("thead");
+    thead.append(head);
+    table.append(thead);
+    const tbody = document.createElement("tbody");
+    items.forEach(item => {
+      const tr = document.createElement("tr");
+      const title = item.title || item.headline || item.name || item.id || "Untitled candidate";
+      const source = item.source_name || item.source || item.url || "Not specified";
+      const priority = item.suggested_priority || item.priority || "Unranked";
+      const status = item.review_status || item.status || "Needs review";
+      [title, priority, status, source].forEach(value => {
+        const td = document.createElement("td");
+        td.textContent = String(value);
+        tr.append(td);
+      });
+      tbody.append(tr);
+    });
+    table.append(tbody);
+    host.append(table);
+  }
+
+  async function connect() {
+    apiKey = $("api-key").value.trim();
+    if (!apiKey) {
+      show("status", "Enter your API key first.");
+      return;
+    }
+    show("status", "Connecting…");
+    try {
+      const [summary, research, proposals, benchmarks] = await Promise.all([
+        getJSON("/v1/dashboard/summary"),
+        getJSON("/v1/dashboard/research?limit=50"),
+        getJSON("/v1/dashboard/proposals"),
+        getJSON("/v1/dashboard/benchmarks")
+      ]);
+
+      $("metrics").replaceChildren();
+      metric("Research candidates", summary.research?.candidate_total);
+      metric("Unreviewed candidates", summary.research?.unreviewed_ranked_candidates);
+      metric("Research findings", summary.findings?.total);
+      metric("Improvement proposals", summary.proposals?.total);
+      metric("Architecture benchmarks", summary.architecture_benchmarks?.total);
+      metric("Catalogue sources", summary.sources?.catalogue_total);
+
+      show("safeguards", JSON.stringify(summary.system, null, 2));
+      show("economics", [
+        summary.currency_and_economic_indicators?.status || "Not connected",
+        summary.currency_and_economic_indicators?.message || "No verified live indicator feed is currently available."
+      ].join("\n"));
+      renderResearch(research);
+      show("proposals", JSON.stringify(proposals, null, 2));
+      show("benchmarks", JSON.stringify(benchmarks, null, 2));
+      show("status", "Connected. Dashboard data loaded. " +
+        "Generated at: " + (summary.generated_at || "not provided"));
+    } catch (error) {
+      apiKey = "";
+      show("status", "Connection failed: " + error.message +
+        ". Check your key and local API configuration.");
+      show("safeguards", "Not loaded.");
+    }
+  }
+
+  $("connect").addEventListener("click", connect);
+  $("api-key").addEventListener("keydown", event => {
+    if (event.key === "Enter") connect();
+  });
+  $("disconnect").addEventListener("click", () => {
+    apiKey = "";
+    $("api-key").value = "";
+    $("metrics").replaceChildren();
+    show("status", "Disconnected. The API key was cleared from page memory.");
+    show("safeguards", "Not connected.");
+    show("proposals", "Not connected.");
+    show("benchmarks", "Not connected.");
+    show("research", "Not connected.");
+  });
+})();
+</script>
+</body>
+</html>

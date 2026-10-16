@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Literal
 
 
 class Transaction(BaseModel):
@@ -27,3 +27,15 @@ class Decision(BaseModel):
     policy_version: str
     action: str
     restrictions: List[str]
+
+class ResearchCandidateReview(BaseModel):
+    reviewer: str = Field(min_length=1, max_length=120)
+    notes: str = Field(min_length=1, max_length=4000)
+    evidence_status: Literal[
+        "not_verified",
+        "partially_verified",
+        "independently_verified",
+        "rejected",
+    ]
+    trustng_relevance: int = Field(ge=1, le=5)
+    lesson_for_africa: str = Field(min_length=1, max_length=4000)
