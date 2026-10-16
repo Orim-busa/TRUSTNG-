@@ -1,3 +1,4 @@
+
 import os
 import secrets
 from contextlib import asynccontextmanager
@@ -13,7 +14,6 @@ import research_promotion
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
-from pathlib import Path
 
 from models import Transaction, ResearchCandidateReview
 from risk_engine import analyze_transaction
@@ -30,6 +30,7 @@ from ai_risk_engine import analyze_transaction_with_ai
 from idempotency import (
     check_transaction,
     check_transaction_integrity,
+    reserve_transaction,
     store_transaction,
     database_mode_enabled,
 )
@@ -44,7 +45,7 @@ from fraud_cases import (
     resolve_fraud_case,
     dismiss_fraud_case,
     get_case_statistics,
-    get_case_audit_history
+    get_case_audit_history,
 )
 
 from audit_store import verify_all_audit_events
@@ -53,7 +54,7 @@ from trust_graph import (
     record_transaction,
     analyze_relationship_risk,
     analyze_transaction_history,
-    analyze_transaction_velocity
+    analyze_transaction_velocity,
 )
 
 
@@ -77,9 +78,8 @@ def home():
     return {
         "service": "TrustNG",
         "status": "running",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
-
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -111,6 +111,7 @@ def dashboard_research(limit: int = 50):
         candidates,
         include_reviewed=True,
     )
+
     return {
         "total": len(ranked),
         "items": ranked[:limit],
@@ -118,13 +119,12 @@ def dashboard_research(limit: int = 50):
     }
 
 
-
 @app.post("/v1/research/candidates/{candidate_id}/review")
 def review_research_candidate(
     candidate_id: str,
     review: ResearchCandidateReview,
 ):
-    """Record a human review without triggering promotion or implementation."""
+    """Record a human review without triggering implementation."""
     try:
         return dashboard_service.research_collector.mark_candidate_reviewed(
             candidate_id,
@@ -173,123 +173,100 @@ def dashboard_benchmarks():
 
 @app.post("/evaluate")
 def evaluate(transaction: Transaction):
+    transaction_id = transaction.transaction_id
 
-    idempotency_check = check_transaction_integrity(
-        transaction
-    )
+    reservation_result = reserve_transaction(transaction)
 
-    if idempotency_check:
+    if reservation_result is not None:
+        status = reservation_result.get("status")
 
-        if idempotency_check["status"] == "REPLAY":
+        if status == "INVALID":
+            return {
+                "transaction_id": transaction_id,
+                "status": "BLOCKED",
+                "message": reservation_result.get("reason", "Transaction ID is missing"),
+            }
 
-            transaction_id = idempotency_check[
-                "transaction_id"
-            ]
+        if status == "ID_REUSE":
+            return {
+                "transaction_id": transaction_id,
+                "status": "BLOCKED",
+                "message": "Transaction ID has already been used with different transaction data",
+                "reason": reservation_result.get("reason"),
+            }
 
-            stored_record = check_transaction(
-                transaction_id
-            )
+        if status == "REPLAY":
+            stored_record = check_transaction(transaction_id)
+            previous_result = stored_record.get("result") if stored_record else None
 
-            if stored_record:
+            if isinstance(previous_result, dict) and previous_result.get("status") == "PROCESSING":
                 return {
                     "transaction_id": transaction_id,
-                    "status": "REPLAY",
-                    "message": (
-                        "Transaction has already "
-                        "been processed"
-                    ),
-                    "previous_result": stored_record[
-                        "result"
-                    ]
+                    "status": "PROCESSING",
+                    "message": "A request with this transaction ID is already being processed.",
                 }
 
-        if idempotency_check["status"] == "ID_REUSE":
-
             return {
-                "transaction_id": transaction.transaction_id,
-                "status": "BLOCKED",
-                "message": (
-                    "Transaction ID has already been "
-                    "used with different transaction data"
-                ),
-                "reason": idempotency_check[
-                    "reason"
-                ]
+                "transaction_id": transaction_id,
+                "status": "REPLAY",
+                "message": "Transaction has already been processed",
+                "previous_result": previous_result,
             }
 
-        if idempotency_check["status"] == "INVALID":
+        return {
+            "transaction_id": transaction_id,
+            "status": "BLOCKED",
+            "message": "Could not safely reserve this transaction. Check its status before retrying.",
+        }
 
-            return {
-                "status": "BLOCKED",
-                "message": idempotency_check[
-                    "reason"
-                ]
-            }
+    graph_record = record_transaction(transaction)
 
-    graph_record = record_transaction(
-        transaction
-    )
+    risk_signals = analyze_transaction(transaction)
 
-    risk_signals = analyze_transaction(
-        transaction
-    )
-
-    relationship_risk = analyze_relationship_risk(
-        transaction.sender
-    )
+    relationship_risk = analyze_relationship_risk(transaction.sender)
 
     sender_history = analyze_transaction_history(
         transaction.sender,
-        window_minutes=60
+        window_minutes=60,
     )
 
     beneficiary_history = analyze_transaction_history(
         transaction.receiver,
-        window_minutes=60
+        window_minutes=60,
     )
 
     sender_velocity = analyze_transaction_velocity(
         transaction.sender,
-        window_minutes=60
+        window_minutes=60,
     )
 
     beneficiary_velocity = analyze_transaction_velocity(
         transaction.receiver,
-        window_minutes=60
+        window_minutes=60,
     )
 
     if relationship_risk:
-        risk_signals.extend(
-            relationship_risk
-        )
+        risk_signals.extend(relationship_risk)
 
     if sender_velocity:
-        risk_signals.append(
-            sender_velocity
-        )
+        risk_signals.append(sender_velocity)
 
     if beneficiary_velocity:
-        risk_signals.append(
-            beneficiary_velocity
-        )
+        risk_signals.append(beneficiary_velocity)
 
-    beneficiary_profile = get_beneficiary_profile(
-        transaction.receiver
-    )
+    beneficiary_profile = get_beneficiary_profile(transaction.receiver)
 
     behavioral_anomalies = analyze_behavioral_anomaly(
         transaction,
-        beneficiary_profile
+        beneficiary_profile,
     )
 
     if behavioral_anomalies:
-        risk_signals.extend(
-            behavioral_anomalies
-        )
+        risk_signals.extend(behavioral_anomalies)
 
     trust_result = calculate_trust(
         transaction,
-        beneficiary_profile
+        beneficiary_profile,
     )
 
     ai_assessment = analyze_transaction_with_ai(
@@ -299,28 +276,25 @@ def evaluate(transaction: Transaction):
         relationship_risk=None,
         transaction_history=None,
         transaction_velocity=None,
-        trust_result=trust_result
+        trust_result=trust_result,
     )
 
     decision = evaluate_transaction(
         transaction,
         risk_signals,
-        trust_result
+        trust_result,
     )
 
     restriction = None
 
     if decision["decision"] == "RESTRICT":
-
         restriction = create_restriction(
             account_reference=transaction.sender,
             restrictions=decision["restrictions"],
-            reason="; ".join(
-                decision["reasons"]
-            ),
+            reason="; ".join(decision["reasons"]),
             risk_level=decision["risk_level"],
             policy=decision["policy"],
-            policy_version=decision["policy_version"]
+            policy_version=decision["policy_version"],
         )
 
     authorization = create_authorization(
@@ -335,104 +309,57 @@ def evaluate(transaction: Transaction):
         decision=decision["decision"],
         risk_level=decision["risk_level"],
         trust_level=trust_result["trust_level"],
-        restrictions=decision["restrictions"]
+        restrictions=decision["restrictions"],
     )
 
     execution_check = validate_execution(
         transaction=transaction,
         authorization=authorization,
-        restriction=restriction
+        restriction=restriction,
     )
 
     execution_result = execute_transaction(
         transaction=transaction,
-        execution_check=execution_check
+        execution_check=execution_check,
     )
 
     response = {
-
         "transaction_id": transaction.transaction_id,
-
         "graph": {
-
             "record": graph_record,
-
             "relationship_risk": relationship_risk,
-
             "transaction_history": {
-
                 "sender": {
                     "entity_id": transaction.sender,
-
-                    "window_minutes": sender_history[
-                        "window_minutes"
-                    ],
-
-                    "transaction_count": sender_history[
-                        "transaction_count"
-                    ],
-
-                    "unique_senders": sender_history[
-                        "unique_senders"
-                    ],
-
-                    "unique_receivers": sender_history[
-                        "unique_receivers"
-                    ],
-
-                    "total_amount": sender_history[
-                        "total_amount"
-                    ]
+                    "window_minutes": sender_history["window_minutes"],
+                    "transaction_count": sender_history["transaction_count"],
+                    "unique_senders": sender_history["unique_senders"],
+                    "unique_receivers": sender_history["unique_receivers"],
+                    "total_amount": sender_history["total_amount"],
                 },
-
                 "beneficiary": {
                     "entity_id": transaction.receiver,
-
-                    "window_minutes": beneficiary_history[
-                        "window_minutes"
-                    ],
-
-                    "transaction_count": beneficiary_history[
-                        "transaction_count"
-                    ],
-
-                    "unique_senders": beneficiary_history[
-                        "unique_senders"
-                    ],
-
-                    "unique_receivers": beneficiary_history[
-                        "unique_receivers"
-                    ],
-
-                    "total_amount": beneficiary_history[
-                        "total_amount"
-                    ]
-                }
+                    "window_minutes": beneficiary_history["window_minutes"],
+                    "transaction_count": beneficiary_history["transaction_count"],
+                    "unique_senders": beneficiary_history["unique_senders"],
+                    "unique_receivers": beneficiary_history["unique_receivers"],
+                    "total_amount": beneficiary_history["total_amount"],
+                },
             },
-
             "velocity": {
                 "sender": sender_velocity,
-                "beneficiary": beneficiary_velocity
-            }
+                "beneficiary": beneficiary_velocity,
+            },
         },
-
         "behavioral_anomalies": behavioral_anomalies,
-
         "risk_signals": risk_signals,
-
         "trust": trust_result,
-
         "ai_assessment": ai_assessment,
-
         "decision": decision,
-
         "restriction": restriction,
-
         "authorization": authorization,
-
         "execution_check": execution_check,
-
-        "execution": execution_result
+        "execution": execution_result,
     }
 
     fraud_case = None
@@ -448,16 +375,12 @@ def evaluate(transaction: Transaction):
     )
 
     meaningful_risk_exists = (
-        decision["decision"] in [
-            "REVIEW",
-            "RESTRICT"
-        ]
+        decision["decision"] in ["REVIEW", "RESTRICT"]
         or high_risk_signal_exists
         or high_behavioral_anomaly_exists
     )
 
     if meaningful_risk_exists:
-
         fraud_case = create_fraud_case(
             transaction=transaction,
             decision=decision["decision"],
@@ -465,15 +388,12 @@ def evaluate(transaction: Transaction):
             risk_signals=risk_signals,
             behavioral_anomalies=behavioral_anomalies,
             trust_result=trust_result,
-            graph_result=response["graph"]
+            graph_result=response["graph"],
         )
 
     response["fraud_case"] = fraud_case
 
-    store_transaction(
-        transaction,
-        response
-    )
+    store_transaction(transaction, response)
 
     return response
 
@@ -481,12 +401,12 @@ def evaluate(transaction: Transaction):
 @app.get("/fraud-cases")
 def get_all_fraud_cases(
     status: str = None,
-    severity: str = None
+    severity: str = None,
 ):
     return {
         "cases": list_fraud_cases(
             status=status,
-            severity=severity
+            severity=severity,
         )
     }
 
@@ -497,34 +417,26 @@ def fraud_case_statistics():
 
 
 @app.get("/fraud-cases/{case_id}")
-def get_single_fraud_case(
-    case_id: str
-):
-    case = get_fraud_case(
-        case_id
-    )
+def get_single_fraud_case(case_id: str):
+    case = get_fraud_case(case_id)
 
     if case is None:
         return {
             "success": False,
-            "reason": "Fraud case not found"
+            "reason": "Fraud case not found",
         }
 
     return {
         "success": True,
-        "case": case
+        "case": case,
     }
 
 
 @app.get("/transactions/{transaction_id}/fraud-cases")
-def get_transaction_fraud_cases(
-    transaction_id: str
-):
+def get_transaction_fraud_cases(transaction_id: str):
     return {
         "transaction_id": transaction_id,
-        "cases": get_cases_for_transaction(
-            transaction_id
-        )
+        "cases": get_cases_for_transaction(transaction_id),
     }
 
 
@@ -532,12 +444,12 @@ def get_transaction_fraud_cases(
 def add_case_note(
     case_id: str,
     note: str,
-    investigator: str = None
+    investigator: str = None,
 ):
     return add_investigation_note(
         case_id=case_id,
         note=note,
-        investigator=investigator
+        investigator=investigator,
     )
 
 
@@ -545,12 +457,12 @@ def add_case_note(
 def add_case_action(
     case_id: str,
     action: str,
-    investigator: str = None
+    investigator: str = None,
 ):
     return record_investigation_action(
         case_id=case_id,
         action=action,
-        investigator=investigator
+        investigator=investigator,
     )
 
 
@@ -558,12 +470,12 @@ def add_case_action(
 def resolve_case(
     case_id: str,
     resolution: str,
-    investigator: str = None
+    investigator: str = None,
 ):
     return resolve_fraud_case(
         case_id=case_id,
         resolution=resolution,
-        investigator=investigator
+        investigator=investigator,
     )
 
 
@@ -571,27 +483,24 @@ def resolve_case(
 def dismiss_case(
     case_id: str,
     reason: str,
-    investigator: str = None
+    investigator: str = None,
 ):
     return dismiss_fraud_case(
         case_id=case_id,
         reason=reason,
-        investigator=investigator
+        investigator=investigator,
     )
 
 
 @app.get("/fraud-cases/{case_id}/audit")
-def get_fraud_case_audit(
-    case_id: str
-):
-    return get_case_audit_history(
-        case_id=case_id
-    )
+def get_fraud_case_audit(case_id: str):
+    return get_case_audit_history(case_id=case_id)
 
 
 @app.get("/audit/integrity")
 def verify_audit_integrity():
     return verify_all_audit_events()
+
 
 @app.get("/v1/health")
 def developer_api_health():
@@ -618,23 +527,23 @@ def developer_api_health():
 @app.post("/v1/transactions/check")
 def developer_transaction_check(
     transaction: Transaction,
-    x_api_key: str | None = Header(default=None, alias="X-API-Key")
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ):
     configured_key = os.environ.get("TRUSTNG_API_KEY")
 
     if not configured_key:
         raise HTTPException(
             status_code=503,
-            detail="Developer API is not configured with an API key."
+            detail="Developer API is not configured with an API key.",
         )
 
     if not x_api_key or not secrets.compare_digest(
         x_api_key,
-        configured_key
+        configured_key,
     ):
         raise HTTPException(
             status_code=401,
-            detail="A valid X-API-Key is required."
+            detail="A valid X-API-Key is required.",
         )
 
     result = evaluate(transaction)
@@ -647,7 +556,7 @@ def developer_transaction_check(
         "action": policy_decision.get("action"),
         "reasons": policy_decision.get("reasons", []),
         "trust": result.get("trust"),
-        "analysis": result
+        "analysis": result,
     }
 
 
@@ -662,7 +571,7 @@ async def protect_internal_routes(request, call_next):
         "/docs",
         "/openapi.json",
         "/redoc",
-        "/docs/oauth2-redirect"
+        "/docs/oauth2-redirect",
     }
 
     if request.url.path in public_paths:
@@ -673,18 +582,18 @@ async def protect_internal_routes(request, call_next):
     if not configured_key:
         return JSONResponse(
             status_code=503,
-            content={"detail": "API is not configured with a key."}
+            content={"detail": "API is not configured with a key."},
         )
 
     provided_key = request.headers.get("X-API-Key")
 
     if not provided_key or not secrets.compare_digest(
         provided_key,
-        configured_key
+        configured_key,
     ):
         return JSONResponse(
             status_code=401,
-            content={"detail": "A valid X-API-Key is required."}
+            content={"detail": "A valid X-API-Key is required."},
         )
 
     return await call_next(request)

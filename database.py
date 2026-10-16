@@ -1,3 +1,4 @@
+
 import os
 
 import psycopg
@@ -133,6 +134,9 @@ def save_processed_transaction(transaction_id, fingerprint, result):
     Returns True if inserted, or False if that ID already exists.
     """
 
+    if not transaction_id:
+        raise ValueError("Transaction ID is required.")
+
     with get_database_connection() as connection:
         row = connection.execute(
             """
@@ -146,6 +150,34 @@ def save_processed_transaction(transaction_id, fingerprint, result):
                 transaction_id,
                 Jsonb(list(fingerprint)),
                 Jsonb(result),
+            ),
+        ).fetchone()
+
+    return row is not None
+
+
+def update_processed_transaction_result(transaction_id, result):
+    """
+    Update the result of an existing transaction reservation.
+
+    This never inserts a new transaction or overwrites its fingerprint.
+    Returns True if a record was updated, or False if it does not exist.
+    """
+
+    if not transaction_id:
+        raise ValueError("Transaction ID is required.")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            UPDATE processed_transactions
+            SET result = %s
+            WHERE transaction_id = %s
+            RETURNING transaction_id
+            """,
+            (
+                Jsonb(result),
+                transaction_id,
             ),
         ).fetchone()
 
