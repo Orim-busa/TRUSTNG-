@@ -158,12 +158,10 @@ def save_processed_transaction(transaction_id, fingerprint, result):
 
 def update_processed_transaction_result(transaction_id, result):
     """
-    Update the result of an existing transaction reservation.
+    Atomically finalize a reserved transaction only while it is PROCESSING.
 
-    This never inserts a new transaction or overwrites its fingerprint.
-    Returns True if a record was updated, or False if it does not exist.
+    Returns True if the reservation was finalized, otherwise False.
     """
-
     if not transaction_id:
         raise ValueError("Transaction ID is required.")
 
@@ -173,6 +171,7 @@ def update_processed_transaction_result(transaction_id, result):
             UPDATE processed_transactions
             SET result = %s
             WHERE transaction_id = %s
+              AND result->>'status' = 'PROCESSING'
             RETURNING transaction_id
             """,
             (
@@ -182,7 +181,6 @@ def update_processed_transaction_result(transaction_id, result):
         ).fetchone()
 
     return row is not None
-
 
 def get_processed_transaction_count():
     """Return the number of stored transaction records."""

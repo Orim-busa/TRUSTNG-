@@ -465,3 +465,61 @@ def test_get_transaction_execution_handles_pending_record(
         "status": "PENDING",
         "executed_at": None,
     }
+
+
+def test_update_processed_transaction_result_only_updates_processing(monkeypatch):
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def execute(self, statement, parameters=None):
+            assert "result->>'status' = 'PROCESSING'" in statement
+            assert parameters[1] == "TX-001"
+            assert parameters[0].obj == {"status": "ALLOWED"}
+            return self
+
+        def fetchone(self):
+            return {"transaction_id": "TX-001"}
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    assert database.update_processed_transaction_result(
+        "TX-001",
+        {"status": "ALLOWED"},
+    ) is True
+
+
+def test_update_processed_transaction_result_returns_false_if_not_processing(
+    monkeypatch,
+):
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def execute(self, statement, parameters=None):
+            assert "result->>'status' = 'PROCESSING'" in statement
+            return self
+
+        def fetchone(self):
+            return None
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    assert database.update_processed_transaction_result(
+        "TX-001",
+        {"status": "BLOCKED"},
+    ) is False

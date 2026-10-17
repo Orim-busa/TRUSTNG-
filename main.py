@@ -29,7 +29,6 @@ from ai_risk_engine import analyze_transaction_with_ai
 
 from idempotency import (
     check_transaction,
-    check_transaction_integrity,
     reserve_transaction,
     store_transaction,
     database_mode_enabled,
@@ -184,26 +183,39 @@ def evaluate(transaction: Transaction):
             return {
                 "transaction_id": transaction_id,
                 "status": "BLOCKED",
-                "message": reservation_result.get("reason", "Transaction ID is missing"),
+                "message": reservation_result.get(
+                    "reason", "Transaction ID is missing"
+                ),
             }
 
         if status == "ID_REUSE":
             return {
                 "transaction_id": transaction_id,
                 "status": "BLOCKED",
-                "message": "Transaction ID has already been used with different transaction data",
+                "message": (
+                    "Transaction ID has already been used "
+                    "with different transaction data"
+                ),
                 "reason": reservation_result.get("reason"),
             }
 
         if status == "REPLAY":
             stored_record = check_transaction(transaction_id)
-            previous_result = stored_record.get("result") if stored_record else None
+            previous_result = (
+                stored_record.get("result") if stored_record else None
+            )
 
-            if isinstance(previous_result, dict) and previous_result.get("status") == "PROCESSING":
+            if (
+                isinstance(previous_result, dict)
+                and previous_result.get("status") == "PROCESSING"
+            ):
                 return {
                     "transaction_id": transaction_id,
                     "status": "PROCESSING",
-                    "message": "A request with this transaction ID is already being processed.",
+                    "message": (
+                        "A request with this transaction ID "
+                        "is already being processed."
+                    ),
                 }
 
             return {
@@ -216,11 +228,13 @@ def evaluate(transaction: Transaction):
         return {
             "transaction_id": transaction_id,
             "status": "BLOCKED",
-            "message": "Could not safely reserve this transaction. Check its status before retrying.",
+            "message": (
+                "Could not safely reserve this transaction. "
+                "Check its status before retrying."
+            ),
         }
 
     graph_record = record_transaction(transaction)
-
     risk_signals = analyze_transaction(transaction)
 
     relationship_risk = analyze_relationship_risk(transaction.sender)
@@ -229,7 +243,6 @@ def evaluate(transaction: Transaction):
         transaction.sender,
         window_minutes=60,
     )
-
     beneficiary_history = analyze_transaction_history(
         transaction.receiver,
         window_minutes=60,
@@ -239,7 +252,6 @@ def evaluate(transaction: Transaction):
         transaction.sender,
         window_minutes=60,
     )
-
     beneficiary_velocity = analyze_transaction_velocity(
         transaction.receiver,
         window_minutes=60,
@@ -269,14 +281,21 @@ def evaluate(transaction: Transaction):
         beneficiary_profile,
     )
 
+    # Build the AI assessment from the available signals.
+    # The AI assessment is advisory; policy remains authoritative.
     ai_assessment = analyze_transaction_with_ai(
         transaction=transaction,
         risk_signals=risk_signals,
         behavioral_anomalies=None,
         relationship_risk=None,
         transaction_history=None,
-        transaction_velocity=None,
+        transaction_velocity=[
+            velocity
+            for velocity in (sender_velocity, beneficiary_velocity)
+            if velocity
+        ],
         trust_result=trust_result,
+        transaction_histories=[sender_history, beneficiary_history],
     )
 
     decision = evaluate_transaction(
@@ -362,8 +381,6 @@ def evaluate(transaction: Transaction):
         "execution": execution_result,
     }
 
-    fraud_case = None
-
     high_risk_signal_exists = any(
         signal.get("severity") == "HIGH"
         for signal in risk_signals
@@ -379,6 +396,8 @@ def evaluate(transaction: Transaction):
         or high_risk_signal_exists
         or high_behavioral_anomaly_exists
     )
+
+    fraud_case = None
 
     if meaningful_risk_exists:
         fraud_case = create_fraud_case(

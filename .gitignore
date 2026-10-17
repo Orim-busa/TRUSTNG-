@@ -9,4 +9,6 @@ trustng_audit_log.json.tmp
 main.py.backup*
 
 # Local backup files
-*.bak
+*.swp
+*.backup
+*.before_*

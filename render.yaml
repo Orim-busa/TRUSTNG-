@@ -8,3 +8,5 @@ services:
     envVars:
       - key: TRUSTNG_API_KEY
         sync: false
+      - key: DATABASE_URL
+        sync: false
