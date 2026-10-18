@@ -281,3 +281,134 @@ def test_concurrent_reservations_allow_only_one_first_reservation(
     assert len(first_reservations) == 1
     assert len(replays) == 23
     assert len(idempotency.PROCESSED_TRANSACTIONS) == 1
+
+
+def test_database_duplicate_reservation_is_identified_as_replay(monkeypatch):
+    import idempotency
+
+    transaction = make_transaction("DB-RESERVE-TEST-001")
+    fingerprint = idempotency.create_transaction_fingerprint(transaction)
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+    monkeypatch.setattr(
+        idempotency.database, "save_processed_transaction",
+        lambda *args: False,
+    )
+    monkeypatch.setattr(
+        idempotency.database, "get_processed_transaction",
+        lambda transaction_id: {
+            "transaction_id": transaction_id,
+            "fingerprint": fingerprint,
+            "result": {"status": "PROCESSING"},
+        },
+    )
+
+    result = idempotency.reserve_transaction(transaction)
+    assert result["status"] == "REPLAY"
+    assert result["transaction_id"] == transaction.transaction_id
+
+
+def test_database_duplicate_reservation_detects_changed_fingerprint(monkeypatch):
+    import idempotency
+
+    transaction = make_transaction("DB-RESERVE-TEST-002")
+    different_fingerprint = (
+        "DB-RESERVE-TEST-002", "different-sender", "receiver_001",
+        "NGN", 5000, "BANK", "NG", "device_001",
+    )
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+    monkeypatch.setattr(
+        idempotency.database, "save_processed_transaction",
+        lambda *args: False,
+    )
+    monkeypatch.setattr(
+        idempotency.database, "get_processed_transaction",
+        lambda transaction_id: {
+            "transaction_id": transaction_id,
+            "fingerprint": different_fingerprint,
+            "result": {"status": "PROCESSING"},
+        },
+    )
+
+    result = idempotency.reserve_transaction(transaction)
+    assert result["status"] == "ID_REUSE"
+
+
+def test_database_duplicate_lookup_failure_propagates(monkeypatch):
+    import idempotency
+    import pytest
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+    monkeypatch.setattr(
+        idempotency.database, "save_processed_transaction",
+        lambda *args: False,
+    )
+
+    def fail_lookup(transaction_id):
+        raise RuntimeError("simulated database lookup failure")
+
+    monkeypatch.setattr(
+        idempotency.database, "get_processed_transaction", fail_lookup,
+    )
+
+    with pytest.raises(RuntimeError, match="simulated database lookup failure"):
+        idempotency.reserve_transaction(
+            make_transaction("DB-RESERVE-TEST-003")
+        )
+
+
+def test_database_finalization_failure_is_not_reported_as_success(monkeypatch):
+    import idempotency
+    import pytest
+
+    transaction = make_transaction("DB-RESERVE-TEST-004")
+    fingerprint = idempotency.create_transaction_fingerprint(transaction)
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+    monkeypatch.setattr(
+        idempotency.database, "get_processed_transaction",
+        lambda transaction_id: {
+            "transaction_id": transaction_id,
+            "fingerprint": fingerprint,
+            "result": {"status": "PROCESSING"},
+        },
+    )
+    monkeypatch.setattr(
+        idempotency.database, "update_processed_transaction_result",
+        lambda transaction_id, result: False,
+    )
+
+    with pytest.raises(
+        RuntimeError, match="Could not update the reserved transaction result",
+    ):
+        idempotency.store_transaction(transaction, {"status": "BLOCKED"})
+
+
+def test_database_final_result_cannot_be_overwritten(monkeypatch):
+    import idempotency
+    import pytest
+
+    transaction = make_transaction("DB-RESERVE-TEST-005")
+    fingerprint = idempotency.create_transaction_fingerprint(transaction)
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+    monkeypatch.setattr(
+        idempotency.database, "get_processed_transaction",
+        lambda transaction_id: {
+            "transaction_id": transaction_id,
+            "fingerprint": fingerprint,
+            "result": {"status": "BLOCKED"},
+        },
+    )
+
+    def unexpected_update(*args, **kwargs):
+        pytest.fail("Finalized transaction must not be updated")
+
+    monkeypatch.setattr(
+        idempotency.database, "update_processed_transaction_result",
+        unexpected_update,
+    )
+
+    with pytest.raises(RuntimeError, match="final result"):
+        idempotency.store_transaction(transaction, {"status": "ALLOWED"})
