@@ -113,6 +113,39 @@ def initialize_database():
             """
         )
 
+        # Provider-operation records are separate from simulated executions.
+        # They reserve an idempotency key before a future provider request.
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS provider_operations (
+                idempotency_key TEXT PRIMARY KEY,
+                provider TEXT NOT NULL,
+                transaction_id TEXT NOT NULL,
+                request_fingerprint TEXT NOT NULL,
+                status TEXT NOT NULL CHECK (
+                    status IN (
+                        'PENDING',
+                        'SUCCEEDED',
+                        'FAILED',
+                        'RECONCILIATION_REQUIRED'
+                    )
+                ),
+                provider_reference TEXT,
+                result JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                UNIQUE (provider, transaction_id)
+            )
+            """
+        )
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_provider_operations_status_updated
+            ON provider_operations (status, updated_at)
+            """
+        )
+
 
 def check_database_connection():
     """Verify that PostgreSQL accepts a connection."""
@@ -381,3 +414,251 @@ def list_pending_transaction_executions(
         })
 
     return candidates
+
+
+def reserve_provider_operation(
+    idempotency_key,
+    provider,
+    transaction_id,
+    request_fingerprint,
+):
+    """
+    Atomically reserve a provider operation.
+
+    Returns True only when a new operation is inserted. A duplicate key or
+    duplicate transaction for the same provider returns False. Database
+    errors propagate so callers can fail closed.
+    """
+    values = {
+        "idempotency_key": idempotency_key,
+        "provider": provider,
+        "transaction_id": transaction_id,
+        "request_fingerprint": request_fingerprint,
+    }
+    for name, value in values.items():
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{name} is required.")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            INSERT INTO provider_operations (
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+                status
+            )
+            VALUES (%s, %s, %s, %s, 'PENDING')
+            ON CONFLICT DO NOTHING
+            RETURNING idempotency_key
+            """,
+            (
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+            ),
+        ).fetchone()
+
+    return row is not None
+
+
+
+def reserve_or_inspect_provider_operation(
+    idempotency_key,
+    provider,
+    transaction_id,
+    request_fingerprint,
+):
+    """
+    Reserve a new operation or classify an existing reservation.
+
+    Returns a dictionary with decision RESERVED, REPLAY, CONFLICT,
+    or NOT_FOUND. This function never submits a provider request.
+    """
+    values = {
+        "idempotency_key": idempotency_key,
+        "provider": provider,
+        "transaction_id": transaction_id,
+        "request_fingerprint": request_fingerprint,
+    }
+    for name, value in values.items():
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{name} is required.")
+
+    with get_database_connection() as connection:
+        inserted = connection.execute(
+            """
+            INSERT INTO provider_operations (
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+                status
+            )
+            VALUES (%s, %s, %s, %s, 'PENDING')
+            ON CONFLICT DO NOTHING
+            RETURNING idempotency_key
+            """,
+            (
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+            ),
+        ).fetchone()
+
+        if inserted is not None:
+            return {"decision": "RESERVED", "operation": None}
+
+        rows = connection.execute(
+            """
+            SELECT
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+                status,
+                provider_reference,
+                result,
+                created_at,
+                updated_at
+            FROM provider_operations
+            WHERE idempotency_key = %s
+               OR (provider = %s AND transaction_id = %s)
+            """,
+            (idempotency_key, provider, transaction_id),
+        ).fetchall()
+
+    if not rows:
+        return {"decision": "NOT_FOUND", "operation": None}
+
+    # More than one matching row means the unique constraints identify
+    # conflicting records. Never accept a replay in that situation.
+    if len(rows) != 1:
+        return {"decision": "CONFLICT", "operation": None}
+
+    record = dict(rows[0])
+    if not (
+        record["idempotency_key"] == idempotency_key
+        and record["provider"] == provider
+        and record["transaction_id"] == transaction_id
+        and record["request_fingerprint"] == request_fingerprint
+    ):
+        return {"decision": "CONFLICT", "operation": None}
+
+    for field in ("created_at", "updated_at"):
+        value = record.get(field)
+        if value is not None:
+            record[field] = value.isoformat()
+
+    return {"decision": "REPLAY", "operation": record}
+
+
+def get_provider_operation(idempotency_key):
+    """Retrieve a provider-operation record by idempotency key."""
+    if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+        raise ValueError("idempotency_key is required.")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            SELECT
+                idempotency_key,
+                provider,
+                transaction_id,
+                request_fingerprint,
+                status,
+                provider_reference,
+                result,
+                created_at,
+                updated_at
+            FROM provider_operations
+            WHERE idempotency_key = %s
+            """,
+            (idempotency_key,),
+        ).fetchone()
+
+    if row is None:
+        return None
+
+    record = dict(row)
+    for field in ("created_at", "updated_at"):
+        if record[field] is not None:
+            record[field] = record[field].isoformat()
+
+    return record
+
+
+def update_provider_operation_status(
+    idempotency_key,
+    status,
+    result,
+    provider_reference=None,
+    *,
+    authoritative=False,
+):
+    """
+    Safely advance a provider operation.
+
+    PENDING may become RECONCILIATION_REQUIRED without a final provider
+    decision. SUCCEEDED and FAILED require authoritative=True and may only
+    be written from PENDING or RECONCILIATION_REQUIRED.
+
+    Final states cannot be overwritten. Returns True when updated, False
+    when no eligible record was updated. Database errors propagate.
+    """
+    allowed_statuses = {
+        "SUCCEEDED",
+        "FAILED",
+        "RECONCILIATION_REQUIRED",
+    }
+    if status not in allowed_statuses:
+        raise ValueError("Unsupported provider-operation status.")
+
+    if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+        raise ValueError("idempotency_key is required.")
+
+    if not isinstance(result, dict):
+        raise ValueError("result must be a dictionary.")
+
+    if status in {"SUCCEEDED", "FAILED"} and authoritative is not True:
+        raise ValueError(
+            "SUCCEEDED and FAILED require authoritative=True."
+        )
+
+    if provider_reference is not None and not isinstance(
+        provider_reference, str
+    ):
+        raise ValueError("provider_reference must be a string or None.")
+
+    from psycopg.types.json import Jsonb
+
+    if status == "RECONCILIATION_REQUIRED":
+        eligible_statuses = ("PENDING",)
+    else:
+        eligible_statuses = ("PENDING", "RECONCILIATION_REQUIRED")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            UPDATE provider_operations
+            SET status = %s,
+                result = %s,
+                provider_reference = COALESCE(%s, provider_reference),
+                updated_at = NOW()
+            WHERE idempotency_key = %s
+              AND status = ANY(%s)
+            RETURNING idempotency_key
+            """,
+            (
+                status,
+                Jsonb(result),
+                provider_reference,
+                idempotency_key,
+                list(eligible_statuses),
+            ),
+        ).fetchone()
+
+    return row is not None
