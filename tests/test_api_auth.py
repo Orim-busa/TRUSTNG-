@@ -103,3 +103,33 @@ def test_replay_response_returns_original_summary_fields(monkeypatch):
     assert body["reasons"] == ["Beneficiary trust level is LOW"]
     assert body["trust"] == {"score": 30, "level": "LOW"}
     assert body["analysis"]["status"] == "REPLAY"
+
+
+def test_evaluate_propagates_pre_execution_failure(monkeypatch):
+    import pytest
+    import main
+
+    transaction = {
+        "transaction_id": "failure-isolation-test",
+        "sender": "sender-test",
+        "receiver": "receiver-test",
+        "asset": "NGN",
+        "amount": 100,
+        "channel": "api_test",
+        "country": "NG",
+        "device_id": "device-test",
+    }
+
+    monkeypatch.setattr(
+        main,
+        "reserve_transaction",
+        lambda value: None,
+    )
+
+    def fail_recording(value):
+        raise RuntimeError("simulated pre-execution failure")
+
+    monkeypatch.setattr(main, "record_transaction", fail_recording)
+
+    with pytest.raises(RuntimeError, match="simulated pre-execution failure"):
+        main.evaluate(main.Transaction(**transaction))
