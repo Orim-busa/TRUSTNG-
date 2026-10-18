@@ -72,13 +72,13 @@ app = FastAPI(
 )
 
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 def home():
-    page = Path(__file__).resolve().parent / "public_site" / "index.html"
-    return HTMLResponse(
-        content=page.read_text(encoding="utf-8"),
-        headers={"Cache-Control": "no-store"},
-    )
+    return {
+        "service": "TrustNG",
+        "status": "running",
+        "version": "1.0.0",
+    }
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
@@ -234,187 +234,230 @@ def evaluate(transaction: Transaction):
             ),
         }
 
-    graph_record = record_transaction(transaction)
-    risk_signals = analyze_transaction(transaction)
+    execution_attempted = False
+    try:
+        graph_record = record_transaction(transaction)
+        risk_signals = analyze_transaction(transaction)
 
-    relationship_risk = analyze_relationship_risk(transaction.sender)
+        relationship_risk = analyze_relationship_risk(transaction.sender)
 
-    sender_history = analyze_transaction_history(
-        transaction.sender,
-        window_minutes=60,
-    )
-    beneficiary_history = analyze_transaction_history(
-        transaction.receiver,
-        window_minutes=60,
-    )
-
-    sender_velocity = analyze_transaction_velocity(
-        transaction.sender,
-        window_minutes=60,
-    )
-    beneficiary_velocity = analyze_transaction_velocity(
-        transaction.receiver,
-        window_minutes=60,
-    )
-
-    if relationship_risk:
-        risk_signals.extend(relationship_risk)
-
-    if sender_velocity:
-        risk_signals.append(sender_velocity)
-
-    if beneficiary_velocity:
-        risk_signals.append(beneficiary_velocity)
-
-    beneficiary_profile = get_beneficiary_profile(transaction.receiver)
-
-    behavioral_anomalies = analyze_behavioral_anomaly(
-        transaction,
-        beneficiary_profile,
-    )
-
-    if behavioral_anomalies:
-        risk_signals.extend(behavioral_anomalies)
-
-    trust_result = calculate_trust(
-        transaction,
-        beneficiary_profile,
-    )
-
-    # Build the AI assessment from the available signals.
-    # The AI assessment is advisory; policy remains authoritative.
-    ai_assessment = analyze_transaction_with_ai(
-        transaction=transaction,
-        risk_signals=risk_signals,
-        behavioral_anomalies=None,
-        relationship_risk=None,
-        transaction_history=None,
-        transaction_velocity=[
-            velocity
-            for velocity in (sender_velocity, beneficiary_velocity)
-            if velocity
-        ],
-        trust_result=trust_result,
-        transaction_histories=[sender_history, beneficiary_history],
-    )
-
-    decision = evaluate_transaction(
-        transaction,
-        risk_signals,
-        trust_result,
-    )
-
-    restriction = None
-
-    if decision["decision"] == "RESTRICT":
-        restriction = create_restriction(
-            account_reference=transaction.sender,
-            restrictions=decision["restrictions"],
-            reason="; ".join(decision["reasons"]),
-            risk_level=decision["risk_level"],
-            policy=decision["policy"],
-            policy_version=decision["policy_version"],
+        sender_history = analyze_transaction_history(
+            transaction.sender,
+            window_minutes=60,
+        )
+        beneficiary_history = analyze_transaction_history(
+            transaction.receiver,
+            window_minutes=60,
         )
 
-    authorization = create_authorization(
-        transaction_id=transaction.transaction_id,
-        sender=transaction.sender,
-        receiver=transaction.receiver,
-        asset=transaction.asset,
-        amount=transaction.amount,
-        channel=transaction.channel,
-        country=transaction.country,
-        device_id=transaction.device_id,
-        decision=decision["decision"],
-        risk_level=decision["risk_level"],
-        trust_level=trust_result["trust_level"],
-        restrictions=decision["restrictions"],
-    )
+        sender_velocity = analyze_transaction_velocity(
+            transaction.sender,
+            window_minutes=60,
+        )
+        beneficiary_velocity = analyze_transaction_velocity(
+            transaction.receiver,
+            window_minutes=60,
+        )
 
-    execution_check = validate_execution(
-        transaction=transaction,
-        authorization=authorization,
-        restriction=restriction,
-    )
+        if relationship_risk:
+            risk_signals.extend(relationship_risk)
 
-    execution_result = execute_transaction(
-        transaction=transaction,
-        execution_check=execution_check,
-    )
+        if sender_velocity:
+            risk_signals.append(sender_velocity)
 
-    response = {
-        "transaction_id": transaction.transaction_id,
-        "graph": {
-            "record": graph_record,
-            "relationship_risk": relationship_risk,
-            "transaction_history": {
-                "sender": {
-                    "entity_id": transaction.sender,
-                    "window_minutes": sender_history["window_minutes"],
-                    "transaction_count": sender_history["transaction_count"],
-                    "unique_senders": sender_history["unique_senders"],
-                    "unique_receivers": sender_history["unique_receivers"],
-                    "total_amount": sender_history["total_amount"],
-                },
-                "beneficiary": {
-                    "entity_id": transaction.receiver,
-                    "window_minutes": beneficiary_history["window_minutes"],
-                    "transaction_count": beneficiary_history["transaction_count"],
-                    "unique_senders": beneficiary_history["unique_senders"],
-                    "unique_receivers": beneficiary_history["unique_receivers"],
-                    "total_amount": beneficiary_history["total_amount"],
-                },
-            },
-            "velocity": {
-                "sender": sender_velocity,
-                "beneficiary": beneficiary_velocity,
-            },
-        },
-        "behavioral_anomalies": behavioral_anomalies,
-        "risk_signals": risk_signals,
-        "trust": trust_result,
-        "ai_assessment": ai_assessment,
-        "decision": decision,
-        "restriction": restriction,
-        "authorization": authorization,
-        "execution_check": execution_check,
-        "execution": execution_result,
-    }
+        if beneficiary_velocity:
+            risk_signals.append(beneficiary_velocity)
 
-    high_risk_signal_exists = any(
-        signal.get("severity") == "HIGH"
-        for signal in risk_signals
-    )
+        beneficiary_profile = get_beneficiary_profile(transaction.receiver)
 
-    high_behavioral_anomaly_exists = any(
-        signal.get("severity") == "HIGH"
-        for signal in behavioral_anomalies
-    )
+        behavioral_anomalies = analyze_behavioral_anomaly(
+            transaction,
+            beneficiary_profile,
+        )
 
-    meaningful_risk_exists = (
-        decision["decision"] in ["REVIEW", "RESTRICT"]
-        or high_risk_signal_exists
-        or high_behavioral_anomaly_exists
-    )
+        if behavioral_anomalies:
+            risk_signals.extend(behavioral_anomalies)
 
-    fraud_case = None
+        trust_result = calculate_trust(
+            transaction,
+            beneficiary_profile,
+        )
 
-    if meaningful_risk_exists:
-        fraud_case = create_fraud_case(
+        # Build the AI assessment from the available signals.
+        # The AI assessment is advisory; policy remains authoritative.
+        ai_assessment = analyze_transaction_with_ai(
             transaction=transaction,
+            risk_signals=risk_signals,
+            behavioral_anomalies=None,
+            relationship_risk=None,
+            transaction_history=None,
+            transaction_velocity=[
+                velocity
+                for velocity in (sender_velocity, beneficiary_velocity)
+                if velocity
+            ],
+            trust_result=trust_result,
+            transaction_histories=[sender_history, beneficiary_history],
+        )
+
+        decision = evaluate_transaction(
+            transaction,
+            risk_signals,
+            trust_result,
+        )
+
+        restriction = None
+
+        if decision["decision"] == "RESTRICT":
+            restriction = create_restriction(
+                account_reference=transaction.sender,
+                restrictions=decision["restrictions"],
+                reason="; ".join(decision["reasons"]),
+                risk_level=decision["risk_level"],
+                policy=decision["policy"],
+                policy_version=decision["policy_version"],
+            )
+
+        authorization = create_authorization(
+            transaction_id=transaction.transaction_id,
+            sender=transaction.sender,
+            receiver=transaction.receiver,
+            asset=transaction.asset,
+            amount=transaction.amount,
+            channel=transaction.channel,
+            country=transaction.country,
+            device_id=transaction.device_id,
             decision=decision["decision"],
             risk_level=decision["risk_level"],
-            risk_signals=risk_signals,
-            behavioral_anomalies=behavioral_anomalies,
-            trust_result=trust_result,
-            graph_result=response["graph"],
+            trust_level=trust_result["trust_level"],
+            restrictions=decision["restrictions"],
         )
 
-    response["fraud_case"] = fraud_case
+        execution_check = validate_execution(
+            transaction=transaction,
+            authorization=authorization,
+            restriction=restriction,
+        )
 
-    store_transaction(transaction, response)
+        execution_attempted = True
+        execution_result = execute_transaction(
+            transaction=transaction,
+            execution_check=execution_check,
+        )
 
-    return response
+        response = {
+            "transaction_id": transaction.transaction_id,
+            "graph": {
+                "record": graph_record,
+                "relationship_risk": relationship_risk,
+                "transaction_history": {
+                    "sender": {
+                        "entity_id": transaction.sender,
+                        "window_minutes": sender_history["window_minutes"],
+                        "transaction_count": sender_history["transaction_count"],
+                        "unique_senders": sender_history["unique_senders"],
+                        "unique_receivers": sender_history["unique_receivers"],
+                        "total_amount": sender_history["total_amount"],
+                    },
+                    "beneficiary": {
+                        "entity_id": transaction.receiver,
+                        "window_minutes": beneficiary_history["window_minutes"],
+                        "transaction_count": beneficiary_history["transaction_count"],
+                        "unique_senders": beneficiary_history["unique_senders"],
+                        "unique_receivers": beneficiary_history["unique_receivers"],
+                        "total_amount": beneficiary_history["total_amount"],
+                    },
+                },
+                "velocity": {
+                    "sender": sender_velocity,
+                    "beneficiary": beneficiary_velocity,
+                },
+            },
+            "behavioral_anomalies": behavioral_anomalies,
+            "risk_signals": risk_signals,
+            "trust": trust_result,
+            "ai_assessment": ai_assessment,
+            "decision": decision,
+            "restriction": restriction,
+            "authorization": authorization,
+            "execution_check": execution_check,
+            "execution": execution_result,
+        }
+
+        high_risk_signal_exists = any(
+            signal.get("severity") == "HIGH"
+            for signal in risk_signals
+        )
+
+        high_behavioral_anomaly_exists = any(
+            signal.get("severity") == "HIGH"
+            for signal in behavioral_anomalies
+        )
+
+        meaningful_risk_exists = (
+            decision["decision"] in ["REVIEW", "RESTRICT"]
+            or high_risk_signal_exists
+            or high_behavioral_anomaly_exists
+        )
+
+        fraud_case = None
+
+        if meaningful_risk_exists:
+            fraud_case = create_fraud_case(
+                transaction=transaction,
+                decision=decision["decision"],
+                risk_level=decision["risk_level"],
+                risk_signals=risk_signals,
+                behavioral_anomalies=behavioral_anomalies,
+                trust_result=trust_result,
+                graph_result=response["graph"],
+            )
+
+        response["fraud_case"] = fraud_case
+
+        # An uncertain execution outcome must be visible at the transaction
+        # level, not only nested under the execution details.
+        if execution_result.get("status") == "RECONCILIATION_REQUIRED":
+            response["status"] = "RECONCILIATION_REQUIRED"
+            response["message"] = (
+                "Execution completion could not be confirmed. "
+                "Reconcile the transaction before any retry."
+            )
+
+        store_transaction(transaction, response)
+
+        return response
+
+    except Exception:
+        recovery_status = (
+            "RECONCILIATION_REQUIRED"
+            if execution_attempted
+            else "FAILED"
+        )
+        recovery_result = {
+            "transaction_id": transaction_id,
+            "status": recovery_status,
+            "message": (
+                "Execution may have been attempted. Reconcile the transaction "
+                "before any retry."
+                if execution_attempted
+                else "Evaluation failed before execution was attempted. "
+                     "Do not retry until this transaction status is checked."
+            ),
+        }
+        try:
+            store_transaction(transaction, recovery_result)
+        except Exception:
+            # Persistence failed. Never claim that recovery was recorded.
+            return {
+                "transaction_id": transaction_id,
+                "status": "RECONCILIATION_REQUIRED",
+                "message": (
+                    "The transaction outcome or recovery record is uncertain. "
+                    "Do not retry; investigate the transaction record."
+                ),
+            }
+        return recovery_result
 
 
 @app.get("/fraud-cases")

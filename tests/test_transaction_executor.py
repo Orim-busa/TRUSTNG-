@@ -117,5 +117,6 @@ def test_persistent_execution_is_blocked_if_completion_fails(monkeypatch):
     )
 
     assert result["executed"] is False
-    assert result["status"] == "BLOCKED"
-    assert "could not be completed" in result["reason"]
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+    assert "Reconcile" in result["reason"]

@@ -102,15 +102,23 @@ def execute_transaction(transaction, execution_check):
         except Exception:
             return {
                 "executed": False,
-                "status": "BLOCKED",
-                "reason": "Transaction could not be completed because execution status could not be confirmed",
+                "status": "RECONCILIATION_REQUIRED",
+                "outcome_uncertain": True,
+                "reason": (
+                    "Execution completion could not be confirmed. "
+                    "Reconcile before any retry."
+                ),
             }
 
         if not completed:
             return {
                 "executed": False,
-                "status": "BLOCKED",
-                "reason": "Transaction could not be completed because execution status could not be confirmed",
+                "status": "RECONCILIATION_REQUIRED",
+                "outcome_uncertain": True,
+                "reason": (
+                    "Execution completion could not be confirmed. "
+                    "Reconcile before any retry."
+                ),
             }
 
     # 7. Return success only after completion is confirmed.
