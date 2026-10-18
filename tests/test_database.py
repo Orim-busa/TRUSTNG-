@@ -42,8 +42,9 @@ def test_initialize_database_creates_required_tables(monkeypatch):
         executed_statements[1]
     )
     assert "executed_at TIMESTAMPTZ" in executed_statements[1]
-    assert "ADD COLUMN IF NOT EXISTS claimed_at" in (
-        executed_statements[2]
+    assert any(
+        "ADD COLUMN IF NOT EXISTS claimed_at" in statement
+        for statement in executed_statements
     )
     assert any(
         "ALTER COLUMN executed_at DROP NOT NULL" in statement
@@ -523,3 +524,63 @@ def test_update_processed_transaction_result_returns_false_if_not_processing(
         "TX-001",
         {"status": "BLOCKED"},
     ) is False
+
+
+def test_list_pending_transaction_executions_returns_candidates(monkeypatch):
+    from datetime import datetime, timezone
+
+    claimed_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    captured = {}
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def execute(self, statement, parameters=None):
+            captured["statement"] = statement
+            captured["parameters"] = parameters
+            return self
+
+        def fetchall(self):
+            return [{
+                "transaction_id": "TX-UNCERTAIN-001",
+                "status": "PENDING",
+                "claimed_at": claimed_at,
+                "executed_at": None,
+                "transaction_status": "RECONCILIATION_REQUIRED",
+                "transaction_message": "Check provider status",
+            }]
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    result = database.list_pending_transaction_executions(
+        older_than_minutes=5,
+        limit=20,
+    )
+
+    assert len(result) == 1
+    assert result[0]["transaction_id"] == "TX-UNCERTAIN-001"
+    assert result[0]["execution_status"] == "PENDING"
+    assert result[0]["executed_at"] is None
+    assert result[0]["resolution"] == "REQUIRES_PROVIDER_STATUS_CHECK"
+    assert "NOW()" in captured["statement"]
+    assert captured["parameters"] == (5, 20)
+
+
+def test_list_pending_transaction_executions_validates_arguments():
+    import pytest
+
+    with pytest.raises(ValueError):
+        database.list_pending_transaction_executions(
+            older_than_minutes=-1,
+        )
+
+    with pytest.raises(ValueError):
+        database.list_pending_transaction_executions(limit=201)

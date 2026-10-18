@@ -460,6 +460,40 @@ def evaluate(transaction: Transaction):
         return recovery_result
 
 
+@app.get("/v1/reconciliation/pending")
+def list_pending_reconciliation(
+    older_than_minutes: int = 5,
+    limit: int = 50,
+):
+    """List aged PENDING execution records for investigation."""
+    if not 0 <= older_than_minutes <= 10080:
+        raise HTTPException(
+            status_code=400,
+            detail="older_than_minutes must be between 0 and 10080.",
+        )
+    if not 1 <= limit <= 200:
+        raise HTTPException(
+            status_code=400,
+            detail="limit must be between 1 and 200.",
+        )
+
+    candidates = database.list_pending_transaction_executions(
+        older_than_minutes=older_than_minutes,
+        limit=limit,
+    )
+    return {
+        "status": "OK",
+        "count": len(candidates),
+        "older_than_minutes": older_than_minutes,
+        "items": candidates,
+        "note": (
+            "A PENDING record is an investigation candidate, not proof "
+            "of payment success or failure. Check the payment provider "
+            "before resolving an uncertain outcome."
+        ),
+    }
+
+
 @app.get("/fraud-cases")
 def get_all_fraud_cases(
     status: str = None,

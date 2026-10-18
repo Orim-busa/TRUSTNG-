@@ -93,6 +93,17 @@ def initialize_database():
         )
 
 
+
+
+
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_transaction_executions_status_claimed_at
+            ON transaction_executions (status, claimed_at)
+            """
+        )
+
+
 def check_database_connection():
     """Verify that PostgreSQL accepts a connection."""
 
@@ -276,3 +287,63 @@ def get_transaction_execution(transaction_id):
             else None
         ),
     }
+
+
+def list_pending_transaction_executions(
+    older_than_minutes=5,
+    limit=50,
+):
+    """
+    List execution claims that remain PENDING beyond the grace period.
+
+    These are reconciliation candidates, not proof of successful or failed
+    payments. A provider's authoritative status must be checked separately.
+    """
+    if not isinstance(older_than_minutes, int) or older_than_minutes < 0:
+        raise ValueError("older_than_minutes must be a non-negative integer")
+    if not isinstance(limit, int) or not 1 <= limit <= 200:
+        raise ValueError("limit must be between 1 and 200")
+
+    with get_database_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT
+                te.transaction_id,
+                te.status,
+                te.claimed_at,
+                te.executed_at,
+                pt.result->>'status' AS transaction_status,
+                pt.result->>'message' AS transaction_message
+            FROM transaction_executions AS te
+            LEFT JOIN processed_transactions AS pt
+                ON pt.transaction_id = te.transaction_id
+            WHERE te.status = 'PENDING'
+              AND te.claimed_at <=
+                  NOW() - (%s * INTERVAL '1 minute')
+            ORDER BY te.claimed_at ASC
+            LIMIT %s
+            """,
+            (older_than_minutes, limit),
+        ).fetchall()
+
+    candidates = []
+    for row in rows:
+        candidates.append({
+            "transaction_id": row["transaction_id"],
+            "execution_status": row["status"],
+            "claimed_at": (
+                row["claimed_at"].isoformat()
+                if row["claimed_at"] is not None
+                else None
+            ),
+            "executed_at": (
+                row["executed_at"].isoformat()
+                if row["executed_at"] is not None
+                else None
+            ),
+            "transaction_status": row["transaction_status"],
+            "transaction_message": row["transaction_message"],
+            "resolution": "REQUIRES_PROVIDER_STATUS_CHECK",
+        })
+
+    return candidates

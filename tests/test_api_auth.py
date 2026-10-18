@@ -221,3 +221,54 @@ def test_evaluate_returns_reconciliation_required_if_recovery_cannot_be_saved(mo
 
     assert result["status"] == "RECONCILIATION_REQUIRED"
     assert "Do not retry" in result["message"]
+
+
+def test_pending_reconciliation_route_requires_api_key(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    response = client.get("/v1/reconciliation/pending")
+
+    assert response.status_code == 401
+
+
+def test_pending_reconciliation_route_returns_candidates(monkeypatch):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    monkeypatch.setattr(
+        main.database,
+        "list_pending_transaction_executions",
+        lambda older_than_minutes, limit: [{
+            "transaction_id": "TX-UNCERTAIN-001",
+            "execution_status": "PENDING",
+            "claimed_at": "2026-01-01T00:00:00+00:00",
+            "executed_at": None,
+            "transaction_status": "RECONCILIATION_REQUIRED",
+            "transaction_message": "Check provider status",
+            "resolution": "REQUIRES_PROVIDER_STATUS_CHECK",
+        }],
+    )
+
+    response = client.get(
+        "/v1/reconciliation/pending?older_than_minutes=5&limit=20",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["items"][0]["transaction_id"] == "TX-UNCERTAIN-001"
+    assert body["items"][0]["resolution"] == (
+        "REQUIRES_PROVIDER_STATUS_CHECK"
+    )
+
+
+def test_pending_reconciliation_route_rejects_invalid_limit(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    response = client.get(
+        "/v1/reconciliation/pending?limit=201",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 400
