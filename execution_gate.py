@@ -1,4 +1,7 @@
+import os
 from datetime import datetime, timedelta, timezone
+
+import database
 
 
 AUTHORIZATION_EXPIRY_MINUTES = 5
@@ -203,7 +206,10 @@ def validate_execution(
             "Authorization ID is missing"
         )
 
-    elif authorization_id in USED_AUTHORIZATIONS:
+    elif (
+        not os.environ.get("DATABASE_URL")
+        and authorization_id in USED_AUTHORIZATIONS
+    ):
 
         failures.append(
             "Authorization has already been used"
@@ -225,9 +231,34 @@ def validate_execution(
     # 15. Consume authorization
     # ---------------------------------------------------------
 
-    USED_AUTHORIZATIONS.add(
-        authorization_id
-    )
+    # Consume authorization atomically when persistent storage is configured.
+    # Fail closed if persistent replay protection is unavailable.
+    if os.environ.get("DATABASE_URL"):
+        try:
+            consumed = database.consume_authorization(authorization_id)
+        except Exception:
+            return {
+                "execution_allowed": False,
+                "status": "BLOCKED",
+                "reasons": [
+                    "Persistent authorization replay protection is unavailable"
+                ],
+            }
+
+        if not consumed:
+            return {
+                "execution_allowed": False,
+                "status": "BLOCKED",
+                "reasons": ["Authorization has already been used"],
+            }
+    else:
+        if authorization_id in USED_AUTHORIZATIONS:
+            return {
+                "execution_allowed": False,
+                "status": "BLOCKED",
+                "reasons": ["Authorization has already been used"],
+            }
+        USED_AUTHORIZATIONS.add(authorization_id)
 
     return {
         "execution_allowed": True,

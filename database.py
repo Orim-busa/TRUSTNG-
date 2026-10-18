@@ -48,6 +48,16 @@ def initialize_database():
             """
         )
 
+        # Persist authorization consumption across restarts and instances.
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS consumed_authorizations (
+                authorization_id TEXT PRIMARY KEY,
+                consumed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+
         # Safely migrate databases created with the older schema.
         connection.execute(
             """
@@ -205,6 +215,30 @@ def get_processed_transaction_count():
         ).fetchone()
 
     return row["transaction_count"]
+
+
+def consume_authorization(authorization_id):
+    """
+    Atomically consume an authorization ID.
+
+    Returns True for the first claim and False if already consumed.
+    Database errors propagate so callers can fail closed.
+    """
+    if not isinstance(authorization_id, str) or not authorization_id.strip():
+        raise ValueError("Authorization ID is required.")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            INSERT INTO consumed_authorizations (authorization_id)
+            VALUES (%s)
+            ON CONFLICT (authorization_id) DO NOTHING
+            RETURNING authorization_id
+            """,
+            (authorization_id,),
+        ).fetchone()
+
+    return row is not None
 
 
 def claim_transaction_execution(transaction_id):

@@ -1,8 +1,15 @@
 from datetime import datetime, timedelta, timezone
 import uuid
+import pytest
 
 from execution_gate import validate_execution
 from models import Transaction
+
+
+@pytest.fixture(autouse=True)
+def isolate_execution_gate_database_mode(monkeypatch):
+    # Tests use memory mode unless a database-specific test enables it.
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
 
 def make_transaction():
@@ -108,7 +115,8 @@ def test_expired_authorization_is_blocked():
     assert any("expired" in reason.lower() for reason in result["reasons"])
 
 
-def test_authorization_cannot_be_reused():
+def test_authorization_cannot_be_reused(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
     transaction = make_transaction()
     authorization = make_authorization(transaction)
 
@@ -119,3 +127,50 @@ def test_authorization_cannot_be_reused():
     assert second_result["execution_allowed"] is False
     assert any("already been used" in reason.lower()
                for reason in second_result["reasons"])
+
+
+def test_database_authorization_consumption_is_atomic(monkeypatch):
+    import execution_gate
+
+    monkeypatch.setenv("DATABASE_URL", "test-database-configured")
+    consumed_ids = set()
+
+    def fake_consume(authorization_id):
+        if authorization_id in consumed_ids:
+            return False
+        consumed_ids.add(authorization_id)
+        return True
+
+    monkeypatch.setattr(
+        execution_gate.database, "consume_authorization", fake_consume
+    )
+    transaction = make_transaction()
+    authorization = make_authorization(transaction)
+
+    first = execution_gate.validate_execution(transaction, authorization)
+    second = execution_gate.validate_execution(transaction, authorization)
+
+    assert first["execution_allowed"] is True
+    assert second["execution_allowed"] is False
+    assert "already been used" in second["reasons"][0]
+
+
+def test_database_authorization_failure_blocks_execution(monkeypatch):
+    import execution_gate
+
+    monkeypatch.setenv("DATABASE_URL", "test-database-configured")
+
+    def fail_consume(_authorization_id):
+        raise RuntimeError("simulated database failure")
+
+    monkeypatch.setattr(
+        execution_gate.database, "consume_authorization", fail_consume
+    )
+    transaction = make_transaction()
+    authorization = make_authorization(transaction)
+
+    result = execution_gate.validate_execution(transaction, authorization)
+
+    assert result["execution_allowed"] is False
+    assert result["status"] == "BLOCKED"
+    assert "Persistent authorization replay protection is unavailable" in result["reasons"]
