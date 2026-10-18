@@ -72,13 +72,13 @@ app = FastAPI(
 )
 
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def home():
-    return {
-        "service": "TrustNG",
-        "status": "running",
-        "version": "1.0.0",
-    }
+    page = Path(__file__).resolve().parent / "public_site" / "index.html"
+    return HTMLResponse(
+        content=page.read_text(encoding="utf-8"),
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
