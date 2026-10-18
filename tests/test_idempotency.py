@@ -124,3 +124,160 @@ def test_persistent_execution_is_blocked_if_completion_fails(monkeypatch):
     assert result["executed"] is False
     assert result["status"] == "RECONCILIATION_REQUIRED"
     assert "could not be confirmed" in result["reason"]
+
+
+# Direct tests for transaction reservation, replay, and finalization.
+
+def reset_idempotency_state(monkeypatch):
+    import idempotency
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    with idempotency.TRANSACTION_LOCK:
+        idempotency.PROCESSED_TRANSACTIONS.clear()
+
+
+def test_first_transaction_reservation_succeeds(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-001")
+
+    assert idempotency.reserve_transaction(transaction) is None
+
+    stored = idempotency.check_transaction(transaction.transaction_id)
+    assert stored is not None
+    assert stored["result"]["status"] == "PROCESSING"
+
+
+def test_identical_transaction_reservation_is_replay(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-002")
+
+    assert idempotency.reserve_transaction(transaction) is None
+
+    result = idempotency.reserve_transaction(transaction)
+
+    assert result["status"] == "REPLAY"
+    assert result["transaction_id"] == transaction.transaction_id
+
+
+def test_reused_transaction_id_with_changed_amount_is_rejected(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-003")
+    changed_transaction = transaction.model_copy(
+        update={"amount": transaction.amount + 1}
+    )
+
+    assert idempotency.reserve_transaction(transaction) is None
+
+    result = idempotency.reserve_transaction(changed_transaction)
+
+    assert result["status"] == "ID_REUSE"
+    assert result["transaction_id"] == transaction.transaction_id
+
+
+def test_missing_transaction_id_is_rejected(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-004").model_copy(
+        update={"transaction_id": ""}
+    )
+
+    result = idempotency.reserve_transaction(transaction)
+
+    assert result["status"] == "INVALID"
+
+
+def test_reserved_transaction_can_be_finalized(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-005")
+    final_result = {
+        "status": "BLOCKED",
+        "reason": "Test risk decision",
+    }
+
+    assert idempotency.reserve_transaction(transaction) is None
+    idempotency.store_transaction(transaction, final_result)
+
+    stored = idempotency.check_transaction(transaction.transaction_id)
+    assert stored["result"] == final_result
+
+
+def test_final_transaction_result_cannot_be_overwritten(monkeypatch):
+    import idempotency
+    import pytest
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-006")
+
+    assert idempotency.reserve_transaction(transaction) is None
+    idempotency.store_transaction(
+        transaction,
+        {"status": "BLOCKED"},
+    )
+
+    with pytest.raises(RuntimeError, match="final result"):
+        idempotency.store_transaction(
+            transaction,
+            {"status": "ALLOWED"},
+        )
+
+    stored = idempotency.check_transaction(transaction.transaction_id)
+    assert stored["result"]["status"] == "BLOCKED"
+
+
+def test_database_reservation_error_is_not_treated_as_success(
+    monkeypatch,
+):
+    import idempotency
+    import pytest
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+
+    def fail_reservation(*args, **kwargs):
+        raise RuntimeError("simulated database failure")
+
+    monkeypatch.setattr(
+        idempotency.database,
+        "save_processed_transaction",
+        fail_reservation,
+    )
+
+    with pytest.raises(RuntimeError, match="simulated database failure"):
+        idempotency.reserve_transaction(
+            make_transaction("RESERVE-TEST-007")
+        )
+
+
+def test_concurrent_reservations_allow_only_one_first_reservation(
+    monkeypatch,
+):
+    from concurrent.futures import ThreadPoolExecutor
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+    transaction = make_transaction("RESERVE-TEST-008")
+
+    def reserve_once(_):
+        return idempotency.reserve_transaction(transaction)
+
+    with ThreadPoolExecutor(max_workers=12) as executor:
+        results = list(executor.map(reserve_once, range(24)))
+
+    first_reservations = [result for result in results if result is None]
+    replays = [
+        result for result in results
+        if isinstance(result, dict) and result.get("status") == "REPLAY"
+    ]
+
+    assert len(first_reservations) == 1
+    assert len(replays) == 23
+    assert len(idempotency.PROCESSED_TRANSACTIONS) == 1
