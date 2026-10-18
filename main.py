@@ -566,7 +566,14 @@ def developer_transaction_check(
         )
 
     result = evaluate(transaction)
-    policy_decision = result.get("decision", {})
+    summary_result = result
+
+    if result.get("status") == "REPLAY":
+        previous_result = result.get("previous_result")
+        if isinstance(previous_result, dict):
+            summary_result = previous_result
+
+    policy_decision = summary_result.get("decision") or {}
 
     return {
         "transaction_id": result.get("transaction_id"),
@@ -574,7 +581,7 @@ def developer_transaction_check(
         "risk_level": policy_decision.get("risk_level"),
         "action": policy_decision.get("action"),
         "reasons": policy_decision.get("reasons", []),
-        "trust": result.get("trust"),
+        "trust": summary_result.get("trust"),
         "analysis": result,
     }
 
