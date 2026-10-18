@@ -13,6 +13,7 @@ import dashboard_service
 import research_promotion
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 
 from models import Transaction, ResearchCandidateReview
@@ -700,3 +701,51 @@ async def protect_internal_routes(request, call_next):
         )
 
     return await call_next(request)
+
+
+# Document the API-key requirement enforced by protect_internal_routes.
+# The middleware remains the actual authentication enforcement layer.
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    schema.setdefault("components", {}).setdefault(
+        "securitySchemes", {}
+    )["APIKeyHeader"] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": (
+            "Required for protected endpoints. "
+            "Use the API key supplied by the TrustNG operator."
+        ),
+    }
+
+    public_paths = {
+        "/",
+        "/v1/health",
+        "/dashboard",
+    }
+
+    for path, methods in schema.get("paths", {}).items():
+        for operation in methods.values():
+            if not isinstance(operation, dict):
+                continue
+
+            if path in public_paths:
+                operation["security"] = []
+            else:
+                operation["security"] = [{"APIKeyHeader": []}]
+
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi

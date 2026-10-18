@@ -272,3 +272,45 @@ def test_pending_reconciliation_route_rejects_invalid_limit(monkeypatch):
     )
 
     assert response.status_code == 400
+
+
+def test_openapi_documents_api_key_for_protected_routes():
+    schema = app.openapi()
+
+    scheme = schema["components"]["securitySchemes"]["APIKeyHeader"]
+    assert scheme == {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": (
+            "Required for protected endpoints. "
+            "Use the API key supplied by the TrustNG operator."
+        ),
+    }
+
+    protected_operations = [
+        ("/fraud-cases", "get"),
+        ("/fraud-cases/{case_id}/resolve", "post"),
+        ("/v1/reconciliation/pending", "get"),
+        ("/v1/research/candidates/{candidate_id}/review", "post"),
+        ("/v1/research/candidates/{candidate_id}/promote", "post"),
+        ("/v1/transactions/check", "post"),
+    ]
+
+    for route, method in protected_operations:
+        operation = schema["paths"][route][method]
+        assert operation["security"] == [{"APIKeyHeader": []}]
+
+
+def test_openapi_keeps_public_routes_unauthenticated():
+    schema = app.openapi()
+
+    public_operations = [
+        ("/", "get"),
+        ("/v1/health", "get"),
+        ("/dashboard", "get"),
+    ]
+
+    for route, method in public_operations:
+        operation = schema["paths"][route][method]
+        assert operation["security"] == []
