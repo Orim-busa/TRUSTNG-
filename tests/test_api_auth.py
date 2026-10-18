@@ -1,4 +1,5 @@
 import os
+import pytest
 
 from fastapi.testclient import TestClient
 from main import app
@@ -314,3 +315,40 @@ def test_openapi_keeps_public_routes_unauthenticated():
     for route, method in public_operations:
         operation = schema["paths"][route][method]
         assert operation["security"] == []
+
+
+@pytest.mark.parametrize(
+    ("method", "route"),
+    [
+        ("GET", "/v1/dashboard/summary"),
+        ("GET", "/v1/dashboard/research"),
+        ("POST", "/v1/research/candidates/test-candidate/review"),
+        ("POST", "/v1/research/candidates/test-candidate/promote"),
+        ("GET", "/v1/dashboard/proposals"),
+        ("GET", "/v1/dashboard/benchmarks"),
+        ("POST", "/evaluate"),
+        ("GET", "/v1/reconciliation/pending"),
+        ("GET", "/fraud-cases"),
+        ("GET", "/fraud-cases/statistics"),
+        ("GET", "/fraud-cases/test-case"),
+        ("GET", "/transactions/test-transaction/fraud-cases"),
+        ("POST", "/fraud-cases/test-case/notes"),
+        ("POST", "/fraud-cases/test-case/actions"),
+        ("POST", "/fraud-cases/test-case/resolve"),
+        ("POST", "/fraud-cases/test-case/dismiss"),
+        ("GET", "/fraud-cases/test-case/audit"),
+        ("GET", "/audit/integrity"),
+        ("POST", "/v1/transactions/check"),
+    ],
+)
+def test_all_sensitive_routes_reject_missing_api_key(
+    monkeypatch, method, route
+):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    response = client.request(method, route)
+
+    assert response.status_code == 401, (
+        f"{method} {route} should reject a missing API key; "
+        f"got HTTP {response.status_code}"
+    )
