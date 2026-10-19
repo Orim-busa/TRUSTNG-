@@ -474,8 +474,10 @@ def reserve_or_inspect_provider_operation(
     """
     Reserve a new operation or classify an existing reservation.
 
-    Returns a dictionary with decision RESERVED, REPLAY, CONFLICT,
-    or NOT_FOUND. This function never submits a provider request.
+    Returns RESERVED for a new operation; CHECK_PROVIDER_STATUS for an
+    existing PENDING operation; RECONCILE for RECONCILIATION_REQUIRED;
+    REPLAY for a final SUCCEEDED or FAILED result; or CONFLICT/NOT_FOUND.
+    This function never submits a provider request.
     """
     values = {
         "idempotency_key": idempotency_key,
@@ -553,7 +555,17 @@ def reserve_or_inspect_provider_operation(
         if value is not None:
             record[field] = value.isoformat()
 
-    return {"decision": "REPLAY", "operation": record}
+    recovery_decisions = {
+        "PENDING": "CHECK_PROVIDER_STATUS",
+        "RECONCILIATION_REQUIRED": "RECONCILE",
+        "SUCCEEDED": "REPLAY",
+        "FAILED": "REPLAY",
+    }
+    decision = recovery_decisions.get(record["status"])
+    if decision is None:
+        return {"decision": "CONFLICT", "operation": None}
+
+    return {"decision": decision, "operation": record}
 
 
 def get_provider_operation(idempotency_key):

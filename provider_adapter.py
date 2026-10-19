@@ -97,6 +97,29 @@ class SandboxPaymentAdapter:
             "request": payload,
         }
 
+    def inspect(self, transaction: Any) -> dict[str, Any]:
+        """Inspect an in-memory sandbox result without submitting."""
+        prepared = self.prepare(transaction)
+        existing = self._records.get(prepared["idempotency_key"])
+
+        if existing is None:
+            return {
+                "status": "NOT_FOUND",
+                "sandbox": True,
+                "outcome_uncertain": True,
+            }
+
+        if existing["fingerprint"] != prepared["fingerprint"]:
+            return {
+                "status": "IDEMPOTENCY_CONFLICT",
+                "sandbox": True,
+                "outcome_uncertain": False,
+            }
+
+        result = dict(existing["result"])
+        result["replayed"] = True
+        return result
+
     def submit(
         self,
         transaction: Any,

@@ -251,7 +251,7 @@ def test_invalid_status_update_is_rejected(status, result, monkeypatch):
 @pytest.mark.parametrize(
     ("existing_fingerprint", "new_fingerprint", "expected"),
     [
-        ("fp-1", "fp-1", "REPLAY"),
+        ("fp-1", "fp-1", "CHECK_PROVIDER_STATUS"),
         ("fp-1", "fp-2", "CONFLICT"),
     ],
 )
@@ -309,7 +309,7 @@ def test_reserve_or_inspect_classifies_existing_operation(
         "key-1", "sandbox", "TX-1", new_fingerprint
     )
     assert result["decision"] == expected
-    if expected == "REPLAY":
+    if expected == "CHECK_PROVIDER_STATUS":
         assert result["operation"]["status"] == "PENDING"
     else:
         assert result["operation"] is None
@@ -404,4 +404,115 @@ def test_reserve_or_inspect_rejects_multiple_conflicting_records(monkeypatch):
     result = database.reserve_or_inspect_provider_operation(
         "key-1", "sandbox", "TX-1", "fp-1"
     )
+    assert result == {"decision": "CONFLICT", "operation": None}
+
+
+@pytest.mark.parametrize(
+    "existing_status",
+    [
+        "PENDING",
+        "RECONCILIATION_REQUIRED",
+        "SUCCEEDED",
+        "FAILED",
+    ],
+)
+def test_existing_provider_operation_replay_preserves_recovery_state(
+    monkeypatch, existing_status
+):
+    record = {
+        "idempotency_key": "recovery-key-1",
+        "provider": "sandbox",
+        "transaction_id": "RECOVERY-TX-1",
+        "request_fingerprint": "recovery-fingerprint-1",
+        "status": existing_status,
+        "provider_reference": None,
+        "result": {"status": existing_status},
+        "created_at": None,
+        "updated_at": None,
+    }
+
+    class FakeConnection:
+        def __init__(self):
+            self.execute_count = 0
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, statement, parameters=None):
+            self.execute_count += 1
+            return self
+
+        def fetchone(self):
+            # Simulate ON CONFLICT DO NOTHING: no new reservation.
+            return None
+
+        def fetchall(self):
+            return [record]
+
+    connection = FakeConnection()
+    monkeypatch.setattr(
+        database, "get_database_connection", lambda: connection
+    )
+
+    result = database.reserve_or_inspect_provider_operation(
+        "recovery-key-1",
+        "sandbox",
+        "RECOVERY-TX-1",
+        "recovery-fingerprint-1",
+    )
+
+    expected_decision = {
+        "PENDING": "CHECK_PROVIDER_STATUS",
+        "RECONCILIATION_REQUIRED": "RECONCILE",
+        "SUCCEEDED": "REPLAY",
+        "FAILED": "REPLAY",
+    }[existing_status]
+    assert result["decision"] == expected_decision
+    assert result["operation"]["status"] == existing_status
+    assert result["operation"]["result"] == {"status": existing_status}
+    assert connection.execute_count == 2
+
+def test_reserve_or_inspect_rejects_unknown_existing_status(monkeypatch):
+    record = {
+        "idempotency_key": "unknown-status-key",
+        "provider": "sandbox",
+        "transaction_id": "UNKNOWN-STATUS-TX",
+        "request_fingerprint": "unknown-status-fingerprint",
+        "status": "UNEXPECTED_STATUS",
+        "provider_reference": None,
+        "result": {},
+        "created_at": None,
+        "updated_at": None,
+    }
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, statement, parameters=None):
+            return self
+
+        def fetchone(self):
+            return None
+
+        def fetchall(self):
+            return [record]
+
+    monkeypatch.setattr(
+        database, "get_database_connection", lambda: FakeConnection()
+    )
+
+    result = database.reserve_or_inspect_provider_operation(
+        "unknown-status-key",
+        "sandbox",
+        "UNKNOWN-STATUS-TX",
+        "unknown-status-fingerprint",
+    )
+
     assert result == {"decision": "CONFLICT", "operation": None}
