@@ -22,9 +22,6 @@ from policy_engine import evaluate_transaction
 from restriction_engine import create_restriction
 from beneficiary_profiles import get_beneficiary_profile
 from adaptive_trust import calculate_trust
-from authorization_engine import create_authorization
-from execution_gate import validate_execution
-from transaction_executor import execute_transaction
 from behavioral_anomaly import analyze_behavioral_anomaly
 from ai_risk_engine import analyze_transaction_with_ai
 
@@ -175,7 +172,20 @@ def dashboard_benchmarks():
 def evaluate(transaction: Transaction):
     transaction_id = transaction.transaction_id
 
-    reservation_result = reserve_transaction(transaction)
+    try:
+        reservation_result = reserve_transaction(transaction)
+    except Exception:
+        # The reservation may have committed even if confirmation failed.
+        # Never report a definite failure or allow a blind retry.
+        return {
+            "transaction_id": transaction_id,
+            "status": "RECONCILIATION_REQUIRED",
+            "message": (
+                "Transaction reservation could not be confirmed. "
+                "No payment execution was attempted. "
+                "Check transaction status before retrying."
+            ),
+        }
 
     if reservation_result is not None:
         status = reservation_result.get("status")
@@ -235,7 +245,6 @@ def evaluate(transaction: Transaction):
             ),
         }
 
-    execution_attempted = False
     try:
         graph_record = record_transaction(transaction)
         risk_signals = analyze_transaction(transaction)
@@ -319,32 +328,25 @@ def evaluate(transaction: Transaction):
                 policy_version=decision["policy_version"],
             )
 
-        authorization = create_authorization(
-            transaction_id=transaction.transaction_id,
-            sender=transaction.sender,
-            receiver=transaction.receiver,
-            asset=transaction.asset,
-            amount=transaction.amount,
-            channel=transaction.channel,
-            country=transaction.country,
-            device_id=transaction.device_id,
-            decision=decision["decision"],
-            risk_level=decision["risk_level"],
-            trust_level=trust_result["trust_level"],
-            restrictions=decision["restrictions"],
-        )
-
-        execution_check = validate_execution(
-            transaction=transaction,
-            authorization=authorization,
-            restriction=restriction,
-        )
-
-        execution_attempted = True
-        execution_result = execute_transaction(
-            transaction=transaction,
-            execution_check=execution_check,
-        )
+        # Risk evaluation is not payment authorization or execution.
+        # Keep these response fields for compatibility, but clearly indicate
+        # that no execution gate, executor, or payment provider was called.
+        authorization = None
+        execution_check = {
+            "execution_allowed": False,
+            "status": "NOT_ATTEMPTED",
+            "reason": "Risk evaluation does not authorize payment execution.",
+        }
+        execution_result = {
+            "executed": False,
+            "status": "NOT_ATTEMPTED",
+            "simulation": False,
+            "funds_moved": False,
+            "message": (
+                "Risk evaluation only. No executor or payment provider was called."
+            ),
+            "transaction_id": transaction.transaction_id,
+        }
 
         response = {
             "transaction_id": transaction.transaction_id,
@@ -416,34 +418,17 @@ def evaluate(transaction: Transaction):
 
         response["fraud_case"] = fraud_case
 
-        # An uncertain execution outcome must be visible at the transaction
-        # level, not only nested under the execution details.
-        if execution_result.get("status") == "RECONCILIATION_REQUIRED":
-            response["status"] = "RECONCILIATION_REQUIRED"
-            response["message"] = (
-                "Execution completion could not be confirmed. "
-                "Reconcile the transaction before any retry."
-            )
-
         store_transaction(transaction, response)
 
         return response
 
     except Exception:
-        recovery_status = (
-            "RECONCILIATION_REQUIRED"
-            if execution_attempted
-            else "FAILED"
-        )
         recovery_result = {
             "transaction_id": transaction_id,
-            "status": recovery_status,
+            "status": "FAILED",
             "message": (
-                "Execution may have been attempted. Reconcile the transaction "
-                "before any retry."
-                if execution_attempted
-                else "Evaluation failed before execution was attempted. "
-                     "Do not retry until this transaction status is checked."
+                "Evaluation failed before execution was attempted. "
+                "Do not retry until this transaction status is checked."
             ),
         }
         try:

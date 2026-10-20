@@ -106,6 +106,42 @@ def test_replay_response_returns_original_summary_fields(monkeypatch):
     assert body["analysis"]["status"] == "REPLAY"
 
 
+def test_evaluate_returns_reconciliation_required_on_reservation_error(
+    monkeypatch,
+):
+    import main
+
+    transaction = main.Transaction(
+        transaction_id="reservation-error-boundary-test",
+        sender="sender-test",
+        receiver="receiver-test",
+        asset="NGN",
+        amount=100,
+        channel="api_test",
+        country="NG",
+        device_id="device-test",
+    )
+
+    def fail_reservation(value):
+        raise RuntimeError("simulated uncertain reservation")
+
+    monkeypatch.setattr(main, "reserve_transaction", fail_reservation)
+
+    def unexpected_evaluation(*args, **kwargs):
+        raise AssertionError(
+            "Evaluation must stop when reservation cannot be confirmed."
+        )
+
+    monkeypatch.setattr(main, "record_transaction", unexpected_evaluation)
+
+    result = main.evaluate(transaction)
+
+    assert result["transaction_id"] == "reservation-error-boundary-test"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert "No payment execution was attempted" in result["message"]
+    assert "before retrying" in result["message"]
+
+
 def test_evaluate_records_pre_execution_failure(monkeypatch):
     import main
 
@@ -141,7 +177,7 @@ def test_evaluate_records_pre_execution_failure(monkeypatch):
     assert stored == [result]
 
 
-def test_evaluate_requires_reconciliation_if_execution_throws(monkeypatch):
+def test_evaluate_does_not_attempt_execution_or_require_reconciliation(monkeypatch):
     import main
 
     transaction = main.Transaction(
@@ -177,19 +213,28 @@ def test_evaluate_requires_reconciliation_if_execution_throws(monkeypatch):
         "decision": "APPROVE", "risk_level": "LOW", "restrictions": [],
         "reasons": [], "policy": "test", "policy_version": "1", "action": "ALLOW",
     })
-    monkeypatch.setattr(main, "create_authorization", lambda **k: {"authorization_id": "test"})
-    monkeypatch.setattr(main, "validate_execution", lambda **k: {"execution_allowed": True})
+    def unexpected_execution_path(**kwargs):
+        raise AssertionError(
+            "Risk evaluation must not invoke payment authorization or execution."
+        )
 
-    def fail_execution(**kwargs):
-        raise RuntimeError("simulated uncertain execution")
-
-    monkeypatch.setattr(main, "execute_transaction", fail_execution)
+    monkeypatch.setattr(
+        main, "create_authorization", unexpected_execution_path, raising=False
+    )
+    monkeypatch.setattr(
+        main, "validate_execution", unexpected_execution_path, raising=False
+    )
+    monkeypatch.setattr(
+        main, "execute_transaction", unexpected_execution_path, raising=False
+    )
     monkeypatch.setattr(main, "store_transaction", lambda tx, result: stored.append(result))
 
     result = main.evaluate(transaction)
 
-    assert result["status"] == "RECONCILIATION_REQUIRED"
-    assert "Reconcile" in result["message"]
+    assert result["execution"]["status"] == "NOT_ATTEMPTED"
+    assert result["execution"]["funds_moved"] is False
+    assert result["execution_check"]["execution_allowed"] is False
+    assert result.get("status") != "RECONCILIATION_REQUIRED"
     assert stored == [result]
 
 

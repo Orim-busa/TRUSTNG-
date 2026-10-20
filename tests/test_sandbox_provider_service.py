@@ -18,22 +18,39 @@ def make_transaction(transaction_id="SERVICE-TEST-001", amount=1500):
 
 def test_new_reservation_submits_once_and_persists_success(monkeypatch):
     calls = []
+    persisted = {}
     monkeypatch.setattr(
         service.database,
         "reserve_or_inspect_provider_operation",
         lambda *args: calls.append(("reserve", args))
         or {"decision": "RESERVED", "operation": None},
     )
+    def update(*args, **kwargs):
+        calls.append(("update", args, kwargs))
+        persisted["result"] = args[2]
+        return True
+
     monkeypatch.setattr(
-        service.database,
-        "update_provider_operation_status",
-        lambda *args, **kwargs: calls.append(("update", args, kwargs))
-        or True,
+        service.database, "update_provider_operation_status", update
     )
 
     adapter = SandboxPaymentAdapter()
+    transaction = make_transaction()
+    prepared = adapter.prepare(transaction)
+    monkeypatch.setattr(
+        service.database,
+        "get_provider_operation",
+        lambda key: {
+            "idempotency_key": key,
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+            "status": "SUCCEEDED",
+            "result": persisted.get("result"),
+        },
+    )
     result = service.run_sandbox_provider_operation(
-        make_transaction(), adapter=adapter
+        transaction, adapter=adapter
     )
 
     assert result["decision"] == "COMPLETED"
@@ -50,7 +67,9 @@ def test_existing_pending_with_recoverable_result_does_not_resubmit(
     adapter = SandboxPaymentAdapter()
     transaction = make_transaction()
     original = adapter.submit(transaction)
+    prepared = adapter.prepare(transaction)
     calls = []
+    persisted = {}
 
     monkeypatch.setattr(
         service.database,
@@ -59,10 +78,26 @@ def test_existing_pending_with_recoverable_result_does_not_resubmit(
             "status": "PENDING"
         }},
     )
+
+    def update(*args, **kwargs):
+        calls.append((args, kwargs))
+        persisted["result"] = args[2]
+        return True
+
+    monkeypatch.setattr(
+        service.database, "update_provider_operation_status", update
+    )
     monkeypatch.setattr(
         service.database,
-        "update_provider_operation_status",
-        lambda *args, **kwargs: calls.append((args, kwargs)) or True,
+        "get_provider_operation",
+        lambda key: {
+            "idempotency_key": key,
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+            "status": "SUCCEEDED",
+            "result": persisted.get("result"),
+        },
     )
 
     result = service.run_sandbox_provider_operation(
@@ -251,3 +286,199 @@ def test_database_failure_persisting_success_returns_uncertain(monkeypatch):
     assert result["decision"] == "RECONCILE"
     assert result["status"] == "RECONCILIATION_REQUIRED"
     assert result["outcome_uncertain"] is True
+
+
+def test_restart_after_persistence_failure_never_resubmits(monkeypatch):
+    """A fresh adapter must not resubmit an uncertain pending operation."""
+    transaction = make_transaction()
+    reservation_calls = []
+
+    def reserve_or_inspect(*args):
+        reservation_calls.append(args)
+        if len(reservation_calls) == 1:
+            return {"decision": "RESERVED", "operation": None}
+        return {
+            "decision": "CHECK_PROVIDER_STATUS",
+            "operation": {"status": "PENDING"},
+        }
+
+    def fail_persistence(*args, **kwargs):
+        raise RuntimeError("simulated database persistence failure")
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        reserve_or_inspect,
+    )
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        fail_persistence,
+    )
+
+    class CountingSandboxAdapter(SandboxPaymentAdapter):
+        def __init__(self):
+            super().__init__()
+            self.submit_count = 0
+
+        def submit(self, transaction, **kwargs):
+            self.submit_count += 1
+            return super().submit(transaction, **kwargs)
+
+    # First process: reservation succeeds and simulation runs, but the
+    # database cannot confirm that the result was persisted.
+    first_adapter = CountingSandboxAdapter()
+    first_result = service.run_sandbox_provider_operation(
+        transaction, adapter=first_adapter
+    )
+
+    assert first_result["decision"] == "RECONCILE"
+    assert first_result["outcome_uncertain"] is True
+    assert first_adapter.submit_count == 1
+
+    # Simulated restart: a fresh adapter has no in-memory provider record.
+    second_adapter = CountingSandboxAdapter()
+    recovery_result = service.run_sandbox_provider_operation(
+        transaction, adapter=second_adapter
+    )
+
+    assert recovery_result["decision"] == "RECONCILE"
+    assert recovery_result["status"] == "RECONCILIATION_REQUIRED"
+    assert recovery_result["outcome_uncertain"] is True
+    assert second_adapter.submit_count == 0
+    assert len(reservation_calls) == 2
+
+
+def test_recovery_persists_reconciliation_when_database_returns(monkeypatch):
+    """Recovery records uncertainty durably without resubmitting."""
+    transaction = make_transaction()
+    reservation_calls = []
+    update_calls = []
+    durable_state = {"status": "PENDING", "result": None}
+
+    def reserve_or_inspect(*args):
+        reservation_calls.append(args)
+
+        if len(reservation_calls) == 1:
+            return {"decision": "RESERVED", "operation": None}
+
+        if durable_state["status"] == "RECONCILIATION_REQUIRED":
+            return {
+                "decision": "RECONCILE",
+                "operation": {
+                    "status": durable_state["status"],
+                    "result": durable_state["result"],
+                },
+            }
+
+        return {
+            "decision": "CHECK_PROVIDER_STATUS",
+            "operation": {"status": "PENDING"},
+        }
+
+    def update_status(*args, **kwargs):
+        update_calls.append((args, kwargs))
+
+        # The first write fails after the simulated operation has run.
+        if len(update_calls) == 1:
+            raise RuntimeError("database temporarily unavailable")
+
+        # The recovery attempt must only record uncertainty, never success.
+        assert args[1] == "RECONCILIATION_REQUIRED"
+        durable_state["status"] = args[1]
+        durable_state["result"] = args[2]
+        return True
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        reserve_or_inspect,
+    )
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        update_status,
+    )
+
+    class CountingSandboxAdapter(SandboxPaymentAdapter):
+        def __init__(self):
+            super().__init__()
+            self.submit_count = 0
+
+        def submit(self, transaction, **kwargs):
+            self.submit_count += 1
+            return super().submit(transaction, **kwargs)
+
+    # First attempt: sandbox submission runs, but persistence fails.
+    first_adapter = CountingSandboxAdapter()
+    first_result = service.run_sandbox_provider_operation(
+        transaction, adapter=first_adapter
+    )
+
+    assert first_result["decision"] == "RECONCILE"
+    assert first_result["outcome_uncertain"] is True
+    assert first_adapter.submit_count == 1
+    assert durable_state["status"] == "PENDING"
+
+    # Recovery: fresh adapter cannot inspect the old in-memory result.
+    second_adapter = CountingSandboxAdapter()
+    second_result = service.run_sandbox_provider_operation(
+        transaction, adapter=second_adapter
+    )
+
+    assert second_result["decision"] == "RECONCILE"
+    assert second_result["status"] == "RECONCILIATION_REQUIRED"
+    assert second_result["outcome_uncertain"] is True
+    assert second_adapter.submit_count == 0
+    assert durable_state["status"] == "RECONCILIATION_REQUIRED"
+    assert len(update_calls) == 2
+
+    # Later request reads the durable reconciliation state.
+    third_adapter = CountingSandboxAdapter()
+    third_result = service.run_sandbox_provider_operation(
+        transaction, adapter=third_adapter
+    )
+
+    assert third_result["decision"] == "RECONCILE"
+    assert third_result["status"] == "RECONCILIATION_REQUIRED"
+    assert third_adapter.submit_count == 0
+    assert len(reservation_calls) == 3
+    assert len(update_calls) == 2
+
+
+def test_mismatched_database_readback_never_reports_success(monkeypatch):
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {"decision": "RESERVED", "operation": None},
+    )
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        lambda *args, **kwargs: True,
+    )
+    monkeypatch.setattr(
+        service.database,
+        "get_provider_operation",
+        lambda key: {
+            "idempotency_key": key,
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": "deliberately-wrong-fingerprint",
+            "status": "SUCCEEDED",
+            "result": {"status": "SIMULATED_SUCCESS"},
+        },
+    )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=adapter
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+    assert result["decision"] != "COMPLETED"

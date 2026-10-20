@@ -2,9 +2,12 @@
 
 Africa-focused fintech risk intelligence and transaction security API.
 
-TrustNG provides transaction risk assessment, policy-controlled execution
-gates, idempotency protections, and investigation support for uncertain
-transaction execution outcomes.
+TrustNG provides transaction risk assessment, idempotency protections,
+and investigation support for uncertain transaction outcomes.
+
+The authenticated developer transaction-check endpoint is a risk-assessment
+workflow only. It does not authorize or execute payments. A separate sandbox
+workflow can simulate provider outcomes without moving real funds.
 
 ## Current status
 
@@ -37,10 +40,13 @@ operational and regulatory review.
 
 - Risk intelligence is advisory; it does not independently authorize
   financial transactions.
-- Execution must pass the configured Execution Gate.
-- Transaction identifiers and database-backed execution claims help
-  prevent duplicate processing.
-- An uncertain execution outcome must be investigated before retrying.
+- The developer transaction-check endpoint does not invoke payment execution.
+- The separate transaction executor is simulation-only; it does not move
+  real funds.
+- The sandbox provider workflow is isolated from the public risk-assessment
+  endpoint and simulates outcomes without contacting a real payment provider.
+- Database-backed reservations and idempotency checks help prevent duplicate
+  submissions; uncertain outcomes require reconciliation before any retry.
 - A PENDING execution record is not proof of payment success or failure.
 - Never expose API keys, database credentials, or other secrets in source
   control, logs, screenshots, or public issue reports.

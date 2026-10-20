@@ -44,8 +44,10 @@ def test_successful_simulated_execution(monkeypatch):
         {"execution_allowed": True, "status": "READY_FOR_EXECUTION"},
     )
 
-    assert result["executed"] is True
-    assert result["status"] == "EXECUTED"
+    assert result["executed"] is False
+    assert result["status"] == "SIMULATED_EXECUTION"
+    assert result["simulation"] is True
+    assert result["funds_moved"] is False
     assert result["transaction_id"] == transaction_id
 
 
@@ -59,11 +61,11 @@ def test_duplicate_transaction_execution_is_blocked(monkeypatch):
     first_result = execute_transaction(transaction, approved)
     second_result = execute_transaction(transaction, approved)
 
-    assert first_result["executed"] is True
+    assert first_result["executed"] is False
     assert second_result["executed"] is False
     assert second_result["status"] == "DUPLICATE"
 
-def test_persistent_execution_completes_database_record(monkeypatch):
+def test_persistent_simulation_records_database_status(monkeypatch):
     import transaction_executor
 
     transaction_id = "EXEC-PERSISTENT-001"
@@ -77,8 +79,8 @@ def test_persistent_execution_completes_database_record(monkeypatch):
     )
     monkeypatch.setattr(
         transaction_executor.database,
-        "complete_transaction_execution",
-        lambda value: calls.append(("complete", value)) or True,
+        "mark_transaction_execution_simulated",
+        lambda value: calls.append(("mark_simulated", value)) or True,
     )
 
     result = execute_transaction(
@@ -86,15 +88,17 @@ def test_persistent_execution_completes_database_record(monkeypatch):
         {"execution_allowed": True, "status": "READY_FOR_EXECUTION"},
     )
 
-    assert result["executed"] is True
-    assert result["status"] == "EXECUTED"
+    assert result["executed"] is False
+    assert result["status"] == "SIMULATED_EXECUTION"
+    assert result["simulation"] is True
+    assert result["funds_moved"] is False
     assert calls == [
         ("claim", transaction_id),
-        ("complete", transaction_id),
+        ("mark_simulated", transaction_id),
     ]
 
 
-def test_persistent_execution_is_blocked_if_completion_fails(monkeypatch):
+def test_persistent_simulation_is_blocked_if_status_recording_fails(monkeypatch):
     import transaction_executor
 
     transaction_id = "EXEC-PERSISTENT-002"
@@ -107,7 +111,7 @@ def test_persistent_execution_is_blocked_if_completion_fails(monkeypatch):
     )
     monkeypatch.setattr(
         transaction_executor.database,
-        "complete_transaction_execution",
+        "mark_transaction_execution_simulated",
         lambda value: False,
     )
 
@@ -117,6 +121,7 @@ def test_persistent_execution_is_blocked_if_completion_fails(monkeypatch):
     )
 
     assert result["executed"] is False
-    assert result["status"] == "RECONCILIATION_REQUIRED"
-    assert result["outcome_uncertain"] is True
-    assert "Reconcile" in result["reason"]
+    assert result["status"] == "BLOCKED"
+    assert result["simulation"] is True
+    assert result["funds_moved"] is False
+    assert "must not be retried automatically" in result["reason"]

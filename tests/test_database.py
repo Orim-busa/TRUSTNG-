@@ -433,6 +433,79 @@ def test_complete_transaction_execution_rejects_missing_id():
         database.complete_transaction_execution("")
 
 
+def test_mark_transaction_execution_simulated_updates_only_pending(
+    monkeypatch,
+):
+    statements = []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def execute(self, statement, parameters=None):
+            statements.append((statement, parameters))
+            return self
+
+        def fetchone(self):
+            return {"transaction_id": "TX-SIMULATED-001"}
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    assert database.mark_transaction_execution_simulated(
+        "TX-SIMULATED-001"
+    ) is True
+
+    assert len(statements) == 1
+    statement, parameters = statements[0]
+
+    assert "SET status = 'SIMULATED'" in statement
+    assert "executed_at = NULL" in statement
+    assert "status = 'PENDING'" in statement
+    assert "RETURNING transaction_id" in statement
+    assert parameters == ("TX-SIMULATED-001",)
+
+
+def test_mark_transaction_execution_simulated_returns_false_if_not_pending(
+    monkeypatch,
+):
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            return False
+
+        def execute(self, statement, parameters=None):
+            return self
+
+        def fetchone(self):
+            return None
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    assert database.mark_transaction_execution_simulated(
+        "TX-SIMULATED-002"
+    ) is False
+
+
+def test_mark_transaction_execution_simulated_rejects_missing_id():
+    import pytest
+
+    with pytest.raises(ValueError, match="Transaction ID is required"):
+        database.mark_transaction_execution_simulated("")
+
+
 def test_get_transaction_execution_handles_pending_record(
     monkeypatch,
 ):

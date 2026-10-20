@@ -83,43 +83,43 @@ def execute_transaction(transaction, execution_check):
 
     # 5. Prepare the simulated execution result.
     result = {
-        "executed": True,
-        "status": "EXECUTED",
+        "executed": False,
+        "status": "SIMULATED_EXECUTION",
+        "simulation": True,
+        "funds_moved": False,
+        "message": (
+            "Simulation only. No real payment provider was called "
+            "and no funds were moved."
+        ),
         "transaction_id": transaction_id,
         "sender": transaction.sender,
         "receiver": transaction.receiver,
         "asset": transaction.asset,
         "amount": transaction.amount,
-        "executed_at": datetime.now(timezone.utc).isoformat(),
+        "simulated_at": datetime.now(timezone.utc).isoformat(),
     }
 
-    # 6. Confirm completion in PostgreSQL before reporting success.
+    # 6. Record simulation status without marking a payment executed.
     if database_enabled:
         try:
-            completed = database.complete_transaction_execution(
+            recorded = database.mark_transaction_execution_simulated(
                 transaction_id
             )
         except Exception:
+            recorded = False
+
+        if not recorded:
             return {
                 "executed": False,
-                "status": "RECONCILIATION_REQUIRED",
-                "outcome_uncertain": True,
+                "status": "BLOCKED",
+                "simulation": True,
+                "funds_moved": False,
                 "reason": (
-                    "Execution completion could not be confirmed. "
-                    "Reconcile before any retry."
+                    "Simulation status could not be confirmed. "
+                    "The transaction remains claimed and must not be "
+                    "retried automatically."
                 ),
             }
 
-        if not completed:
-            return {
-                "executed": False,
-                "status": "RECONCILIATION_REQUIRED",
-                "outcome_uncertain": True,
-                "reason": (
-                    "Execution completion could not be confirmed. "
-                    "Reconcile before any retry."
-                ),
-            }
-
-    # 7. Return success only after completion is confirmed.
+    # 7. Return the simulation result only after its status is recorded.
     return result

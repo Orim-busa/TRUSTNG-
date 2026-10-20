@@ -327,6 +327,27 @@ def complete_transaction_execution(transaction_id):
     return row is not None
 
 
+def mark_transaction_execution_simulated(transaction_id):
+    """Record a simulation without marking a payment as executed."""
+    if not transaction_id:
+        raise ValueError("Transaction ID is required.")
+
+    with get_database_connection() as connection:
+        row = connection.execute(
+            """
+            UPDATE transaction_executions
+            SET status = 'SIMULATED',
+                executed_at = NULL
+            WHERE transaction_id = %s
+              AND status = 'PENDING'
+            RETURNING transaction_id
+            """,
+            (transaction_id,),
+        ).fetchone()
+
+    return row is not None
+
+
 def get_transaction_execution(transaction_id):
     """Retrieve a previously recorded execution."""
 

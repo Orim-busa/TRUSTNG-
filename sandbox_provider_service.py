@@ -112,12 +112,42 @@ def _persist_sandbox_result(prepared, result):
             {"status": target_status, "result": result},
         )
 
+    # Verify the durable record before reporting completion.
+    try:
+        current = database.get_provider_operation(
+            prepared["idempotency_key"]
+        )
+    except Exception:
+        return _uncertain(
+            "The saved sandbox result could not be read back and verified. "
+            "Do not retry blindly."
+        )
+
+    expected_record = {
+        "idempotency_key": prepared["idempotency_key"],
+        "provider": prepared["provider"],
+        "transaction_id": prepared["request"]["transaction_id"],
+        "request_fingerprint": prepared["fingerprint"],
+        "status": "SUCCEEDED",
+        "result": result,
+    }
+
+    if not isinstance(current, dict) or any(
+        current.get(field) != value
+        for field, value in expected_record.items()
+    ):
+        return _uncertain(
+            "The saved sandbox result did not match the expected operation. "
+            "Do not retry blindly.",
+            current,
+        )
+
     return {
         "decision": "COMPLETED",
         "status": "SIMULATED_SUCCESS",
         "sandbox": True,
         "outcome_uncertain": False,
-        "operation_status": target_status,
+        "operation_status": "SUCCEEDED",
         "result": result,
     }
 
