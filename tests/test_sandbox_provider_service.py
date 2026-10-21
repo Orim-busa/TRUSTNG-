@@ -837,3 +837,37 @@ def test_final_replay_rejects_uncertain_simulated_success(monkeypatch):
     assert result["decision"] == "RECONCILE"
     assert result["status"] == "RECONCILIATION_REQUIRED"
     assert result["outcome_uncertain"] is True
+
+
+def test_persistence_race_rejects_mismatched_final_record(monkeypatch):
+    """A competing final record must pass identity checks before replay."""
+    transaction = make_transaction("RECOVERY-RACE-IDENTITY-001")
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+    result = adapter.submit(transaction)
+
+    # Simulate another worker winning the status transition, but the
+    # record returned afterward belongs to a different transaction.
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        lambda *args, **kwargs: False,
+    )
+    monkeypatch.setattr(
+        service.database,
+        "get_provider_operation",
+        lambda key: {
+            "idempotency_key": key,
+            "provider": prepared["provider"],
+            "transaction_id": "DIFFERENT-TRANSACTION",
+            "request_fingerprint": prepared["fingerprint"],
+            "status": "SUCCEEDED",
+            "result": result,
+        },
+    )
+
+    recovered = service._persist_sandbox_result(prepared, result)
+
+    assert recovered["decision"] == "RECONCILE"
+    assert recovered["status"] == "RECONCILIATION_REQUIRED"
+    assert recovered["outcome_uncertain"] is True

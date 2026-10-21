@@ -109,7 +109,7 @@ def _persist_sandbox_result(prepared, result):
 
     if not updated:
         # A concurrent worker may have completed the operation. Inspect
-        # durable state instead of overwriting it or claiming success.
+        # durable state and validate its identity before accepting a replay.
         try:
             current = database.get_provider_operation(
                 prepared["idempotency_key"]
@@ -117,18 +117,65 @@ def _persist_sandbox_result(prepared, result):
         except Exception:
             current = None
 
-        if current and current.get("status") in {"SUCCEEDED", "FAILED"}:
+        expected_operation = {
+            "idempotency_key": prepared["idempotency_key"],
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+        }
+        expected_result = {
+            "provider": prepared["provider"],
+            "sandbox": True,
+            "transaction_id": prepared["request"]["transaction_id"],
+            "idempotency_key": prepared["idempotency_key"],
+            "fingerprint": prepared["fingerprint"],
+        }
+
+        current_result = (
+            current.get("result") if isinstance(current, dict) else None
+        )
+        current_status = (
+            current.get("status") if isinstance(current, dict) else None
+        )
+
+        valid_final_record = (
+            isinstance(current, dict)
+            and current_status in {"SUCCEEDED", "FAILED"}
+            and all(
+                current.get(field) == value
+                for field, value in expected_operation.items()
+            )
+            and isinstance(current_result, dict)
+            and all(
+                current_result.get(field) == value
+                for field, value in expected_result.items()
+            )
+            and (
+                (
+                    current_status == "SUCCEEDED"
+                    and current_result.get("status") == "SIMULATED_SUCCESS"
+                    and current_result.get("outcome_uncertain") is False
+                )
+                or (
+                    current_status == "FAILED"
+                    and current_result.get("status") == "FAILED"
+                )
+            )
+        )
+
+        if valid_final_record:
             return {
                 "decision": "REPLAY",
-                "status": current["status"],
+                "status": current_status,
                 "sandbox": True,
                 "outcome_uncertain": False,
                 "operation": current,
-                "result": current.get("result"),
+                "result": current_result,
             }
 
         return _uncertain(
-            "The database did not confirm the expected status transition.",
+            "The database did not confirm a matching final operation "
+            "and result. Do not retry blindly.",
             current,
         )
 
