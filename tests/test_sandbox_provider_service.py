@@ -1,4 +1,6 @@
 import pytest
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from models import Transaction
 import sandbox_provider_service as service
 from provider_adapter import SandboxPaymentAdapter
@@ -600,3 +602,80 @@ def test_invalid_adapter_result_requires_reconciliation(
     args, _kwargs = update_calls[0]
     assert args[1] == "RECONCILIATION_REQUIRED"
     assert "invalid result type" in args[2]["reason"].lower()
+
+
+
+def test_concurrent_requests_submit_only_once(monkeypatch):
+    """Only the caller winning the reservation may submit."""
+    transaction = make_transaction("CONCURRENT-SERVICE-TEST-001")
+    reservation_lock = threading.Lock()
+    submit_lock = threading.Lock()
+    reservation_count = 0
+    submit_count = 0
+    start_barrier = threading.Barrier(2)
+
+    def reserve(*args):
+        nonlocal reservation_count
+
+        with reservation_lock:
+            reservation_count += 1
+            if reservation_count == 1:
+                return {"decision": "RESERVED", "operation": None}
+
+            return {
+                "decision": "CHECK_PROVIDER_STATUS",
+                "operation": {"status": "PENDING"},
+            }
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        reserve,
+    )
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        lambda *args, **kwargs: True,
+    )
+    monkeypatch.setattr(
+        service,
+        "_persist_sandbox_result",
+        lambda prepared, result: {
+            "decision": "COMPLETED",
+            "status": "SIMULATED_SUCCESS",
+            "sandbox": True,
+            "outcome_uncertain": False,
+            "result": result,
+        },
+    )
+
+    class CountingAdapter(SandboxPaymentAdapter):
+        def submit(self, transaction, **kwargs):
+            nonlocal submit_count
+            with submit_lock:
+                submit_count += 1
+            return super().submit(transaction, **kwargs)
+
+    adapter = CountingAdapter()
+
+    def run_concurrent_request():
+        start_barrier.wait(timeout=5)
+        return service.run_sandbox_provider_operation(
+            transaction,
+            adapter=adapter,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [
+            pool.submit(run_concurrent_request)
+            for _ in range(2)
+        ]
+        results = [future.result(timeout=10) for future in futures]
+
+    assert reservation_count == 2
+    assert submit_count == 1
+    assert all(isinstance(result, dict) for result in results)
+    assert any(
+        result.get("decision") == "COMPLETED"
+        for result in results
+    )
