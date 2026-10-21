@@ -285,6 +285,25 @@ def run_sandbox_provider_operation(
             "Sandbox submission could not be safely confirmed."
         )
 
+    if not isinstance(result, dict):
+        try:
+            database.update_provider_operation_status(
+                prepared["idempotency_key"],
+                "RECONCILIATION_REQUIRED",
+                {
+                    "reason": (
+                        "Sandbox adapter returned an invalid result type."
+                    )
+                },
+            )
+        except Exception:
+            pass
+
+        return _uncertain(
+            "Sandbox adapter returned an invalid result. "
+            "Do not retry this operation automatically."
+        )
+
     if result.get("status") == "IDEMPOTENCY_CONFLICT":
         return {
             "decision": "CONFLICT",

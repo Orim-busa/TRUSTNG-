@@ -1,3 +1,4 @@
+import pytest
 from models import Transaction
 import sandbox_provider_service as service
 from provider_adapter import SandboxPaymentAdapter
@@ -482,3 +483,44 @@ def test_mismatched_database_readback_never_reports_success(monkeypatch):
     assert result["status"] == "RECONCILIATION_REQUIRED"
     assert result["outcome_uncertain"] is True
     assert result["decision"] != "COMPLETED"
+
+
+@pytest.mark.parametrize("invalid_result", [None, "invalid-result"])
+def test_invalid_adapter_result_requires_reconciliation(
+    monkeypatch, invalid_result
+):
+    transaction = make_transaction()
+    update_calls = []
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {"decision": "RESERVED", "operation": None},
+    )
+
+    def update_status(*args, **kwargs):
+        update_calls.append((args, kwargs))
+        return True
+
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        update_status,
+    )
+
+    class InvalidResultAdapter(SandboxPaymentAdapter):
+        def submit(self, transaction, **kwargs):
+            return invalid_result
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=InvalidResultAdapter()
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+
+    assert len(update_calls) == 1
+    args, _kwargs = update_calls[0]
+    assert args[1] == "RECONCILIATION_REQUIRED"
+    assert "invalid result type" in args[2]["reason"].lower()
