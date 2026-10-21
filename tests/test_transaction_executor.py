@@ -231,3 +231,29 @@ def test_reused_transaction_id_with_changed_details_is_blocked(monkeypatch):
     assert second_result["executed"] is False
 
     EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+def test_string_execution_check_is_blocked_without_claiming(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    transaction_id = "EXEC-INVALID-GATE-STRING"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    result = execute_transaction(make_transaction(transaction_id), "yes")
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert transaction_id not in EXECUTED_TRANSACTIONS
+
+
+def test_list_execution_check_is_blocked_without_claiming(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    transaction_id = "EXEC-INVALID-GATE-LIST"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    result = execute_transaction(
+        make_transaction(transaction_id),
+        ["approved"],
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert transaction_id not in EXECUTED_TRANSACTIONS

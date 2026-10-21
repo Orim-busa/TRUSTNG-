@@ -20,12 +20,19 @@ def execute_transaction(transaction, execution_check):
     This function does not move real funds.
     """
 
-    # 1. Require an execution check.
+    # 1. Require a valid execution check.
     if not execution_check:
         return {
             "executed": False,
             "status": "BLOCKED",
             "reason": "Execution check is missing",
+        }
+
+    if not isinstance(execution_check, dict):
+        return {
+            "executed": False,
+            "status": "BLOCKED",
+            "reason": "Execution check is invalid",
         }
 
     # 2. Require explicit approval from the Execution Gate.
