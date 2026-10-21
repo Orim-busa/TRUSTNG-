@@ -501,3 +501,58 @@ def test_pending_reconciliation_route_returns_503_without_configured_key(
     response = client.get("/v1/reconciliation/pending")
 
     assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("result_status", "previous_result", "expected_replayed"),
+    [
+        ("FAILED", None, False),
+        (
+            "REPLAY",
+            {
+                "transaction_id": "api-failed-replay-regression-test",
+                "status": "FAILED",
+                "message": "Previous evaluation failed.",
+            },
+            True,
+        ),
+    ],
+)
+def test_failed_evaluation_never_returns_successful_api_response(
+    monkeypatch, result_status, previous_result, expected_replayed
+):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    transaction_id = "api-failed-replay-regression-test"
+    result = {
+        "transaction_id": transaction_id,
+        "status": result_status,
+        "message": "Evaluation failed before completion.",
+    }
+    if previous_result is not None:
+        result["previous_result"] = previous_result
+
+    monkeypatch.setattr(main, "evaluate", lambda transaction: result)
+
+    response = client.post(
+        "/v1/transactions/check",
+        headers={"X-API-Key": "test-secret-key"},
+        json={
+            "transaction_id": transaction_id,
+            "sender": "test-sender",
+            "receiver": "test-receiver",
+            "asset": "NGN",
+            "amount": 1500,
+            "channel": "api_test",
+            "country": "NG",
+            "device_id": "test-device",
+        },
+    )
+
+    assert response.status_code == 500
+    detail = response.json()["detail"]
+    assert detail["status"] == "FAILED"
+    assert detail["transaction_id"] == transaction_id
+    assert detail["message"]
+    assert detail.get("replayed", False) is expected_replayed

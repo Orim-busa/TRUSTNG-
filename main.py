@@ -685,6 +685,43 @@ def developer_transaction_check(
             },
         )
 
+    # A failed evaluation is not a completed risk assessment.
+    # Never return HTTP 200 with empty decision fields for this outcome.
+    if result_status == "FAILED":
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "transaction_id": result.get(
+                    "transaction_id", transaction.transaction_id
+                ),
+                "status": "FAILED",
+                "message": result.get(
+                    "message", "Transaction evaluation failed."
+                ),
+            },
+        )
+
+    # A replay must not disguise a previously failed evaluation as success.
+    if result_status == "REPLAY":
+        previous_result = result.get("previous_result")
+        if (
+            isinstance(previous_result, dict)
+            and previous_result.get("status") == "FAILED"
+        ):
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "transaction_id": result.get(
+                        "transaction_id", transaction.transaction_id
+                    ),
+                    "status": "FAILED",
+                    "message": previous_result.get(
+                        "message", "The previous transaction evaluation failed."
+                    ),
+                    "replayed": True,
+                },
+            )
+
     summary_result = result
 
     if result_status == "REPLAY":
