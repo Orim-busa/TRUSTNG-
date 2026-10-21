@@ -629,9 +629,47 @@ def developer_transaction_check(
         )
 
     result = evaluate(transaction)
+    result_status = result.get("status")
+
+    # A transaction ID must never be reused for a different payload.
+    # Return a conflict instead of an HTTP 200 with empty decision fields.
+    if result_status == "BLOCKED":
+        message = result.get(
+            "message",
+            "Transaction could not be safely evaluated.",
+        )
+        if "different transaction data" in message.lower():
+            raise HTTPException(
+                status_code=409,
+                detail={
+                    "transaction_id": result.get(
+                        "transaction_id", transaction.transaction_id
+                    ),
+                    "status": "BLOCKED",
+                    "message": message,
+                    "reason": result.get("reason", message),
+                },
+            )
+
+    # These outcomes are not completed risk assessments. Do not represent
+    # them as ordinary successful evaluations with null decision fields.
+    if result_status in {"RECONCILIATION_REQUIRED", "PROCESSING"}:
+        raise HTTPException(
+            status_code=503 if result_status == "RECONCILIATION_REQUIRED" else 409,
+            detail={
+                "transaction_id": result.get(
+                    "transaction_id", transaction.transaction_id
+                ),
+                "status": result_status,
+                "message": result.get(
+                    "message", "Transaction evaluation is not complete."
+                ),
+            },
+        )
+
     summary_result = result
 
-    if result.get("status") == "REPLAY":
+    if result_status == "REPLAY":
         previous_result = result.get("previous_result")
         if isinstance(previous_result, dict):
             summary_result = previous_result

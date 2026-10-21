@@ -397,3 +397,50 @@ def test_all_sensitive_routes_reject_missing_api_key(
         f"{method} {route} should reject a missing API key; "
         f"got HTTP {response.status_code}"
     )
+
+
+@pytest.mark.parametrize(
+    ("result_status", "expected_http"),
+    [
+        ("BLOCKED", 409),
+        ("RECONCILIATION_REQUIRED", 503),
+        ("PROCESSING", 409),
+    ],
+)
+def test_nonfinal_transaction_results_use_explicit_http_status(
+    monkeypatch, result_status, expected_http
+):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    result = {
+        "transaction_id": "api-response-regression-test",
+        "status": result_status,
+        "message": (
+            "Transaction ID has already been used with different transaction data"
+            if result_status == "BLOCKED"
+            else "Transaction evaluation is not complete."
+        ),
+        "reason": "Transaction payload conflict",
+    }
+    monkeypatch.setattr(main, "evaluate", lambda transaction: result)
+
+    response = client.post(
+        "/v1/transactions/check",
+        headers={"X-API-Key": "test-secret-key"},
+        json={
+            "transaction_id": result["transaction_id"],
+            "sender": "test-sender",
+            "receiver": "test-receiver",
+            "asset": "NGN",
+            "amount": 1500,
+            "channel": "api_test",
+            "country": "NG",
+            "device_id": "test-device",
+        },
+    )
+
+    assert response.status_code == expected_http
+    detail = response.json()["detail"]
+    assert detail["status"] == result_status
+    assert detail["transaction_id"] == result["transaction_id"]
