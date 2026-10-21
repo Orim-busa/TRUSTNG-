@@ -257,3 +257,43 @@ def test_list_execution_check_is_blocked_without_claiming(monkeypatch):
     assert result["executed"] is False
     assert result["status"] == "BLOCKED"
     assert transaction_id not in EXECUTED_TRANSACTIONS
+
+
+def test_execution_check_with_raising_truthiness_is_blocked(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    transaction_id = "EXEC-GATE-RAISING-BOOL"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    class RaisingTruthiness:
+        def __bool__(self):
+            raise RuntimeError("unexpected truthiness error")
+
+    result = execute_transaction(
+        make_transaction(transaction_id),
+        RaisingTruthiness(),
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert "invalid" in result["reason"].lower()
+    assert transaction_id not in EXECUTED_TRANSACTIONS
+
+
+def test_execution_check_dict_subclass_is_blocked(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    transaction_id = "EXEC-GATE-RAISING-GET"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    class RaisingGateDict(dict):
+        def get(self, *args, **kwargs):
+            raise RuntimeError("unexpected gate inspection error")
+
+    result = execute_transaction(
+        make_transaction(transaction_id),
+        RaisingGateDict({"execution_allowed": True}),
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert "invalid" in result["reason"].lower()
+    assert transaction_id not in EXECUTED_TRANSACTIONS

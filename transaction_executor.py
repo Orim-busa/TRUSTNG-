@@ -22,19 +22,28 @@ def execute_transaction(transaction, execution_check):
     This function does not move real funds.
     """
 
-    # 1. Require a valid execution check.
-    if not execution_check:
+    # 1. Validate the gate type before inspecting its contents.
+    # Exact built-in dict validation prevents unexpected subclasses or
+    # custom objects from raising errors during truthiness or .get().
+    if execution_check is None:
         return {
             "executed": False,
             "status": "BLOCKED",
             "reason": "Execution check is missing",
         }
 
-    if not isinstance(execution_check, dict):
+    if type(execution_check) is not dict:
         return {
             "executed": False,
             "status": "BLOCKED",
             "reason": "Execution check is invalid",
+        }
+
+    if not execution_check:
+        return {
+            "executed": False,
+            "status": "BLOCKED",
+            "reason": "Execution check is missing",
         }
 
     # 2. Require explicit approval from the Execution Gate.
