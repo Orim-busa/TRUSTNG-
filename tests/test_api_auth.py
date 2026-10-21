@@ -456,3 +456,48 @@ def test_nonfinal_transaction_results_use_explicit_http_status(
     detail = response.json()["detail"]
     assert detail["status"] == result_status
     assert detail["transaction_id"] == result["transaction_id"]
+
+
+def test_pending_reconciliation_route_rejects_wrong_key_without_database_access(
+    monkeypatch,
+):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    def unexpected_database_access(**kwargs):
+        pytest.fail("Unauthorized request must not access reconciliation data")
+
+    monkeypatch.setattr(
+        main.database,
+        "list_pending_transaction_executions",
+        unexpected_database_access,
+    )
+
+    response = client.get(
+        "/v1/reconciliation/pending",
+        headers={"X-API-Key": "wrong-secret-key"},
+    )
+
+    assert response.status_code == 401
+
+
+def test_pending_reconciliation_route_returns_503_without_configured_key(
+    monkeypatch,
+):
+    import main
+
+    monkeypatch.delenv("TRUSTNG_API_KEY", raising=False)
+
+    def unexpected_database_access(**kwargs):
+        pytest.fail("Unconfigured API must not access reconciliation data")
+
+    monkeypatch.setattr(
+        main.database,
+        "list_pending_transaction_executions",
+        unexpected_database_access,
+    )
+
+    response = client.get("/v1/reconciliation/pending")
+
+    assert response.status_code == 503
