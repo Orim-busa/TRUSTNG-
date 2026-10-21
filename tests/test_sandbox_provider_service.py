@@ -155,24 +155,100 @@ def test_existing_reconciliation_state_never_submits(monkeypatch):
 
 
 def test_final_result_is_replayed_without_submission(monkeypatch):
-    stored_result = {"status": "SIMULATED_SUCCESS", "sandbox": True}
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+    stored_result = {
+        "provider": prepared["provider"],
+        "sandbox": True,
+        "transaction_id": prepared["request"]["transaction_id"],
+        "idempotency_key": prepared["idempotency_key"],
+        "fingerprint": prepared["fingerprint"],
+        "status": "SIMULATED_SUCCESS",
+    }
+    operation = {
+        "idempotency_key": prepared["idempotency_key"],
+        "provider": prepared["provider"],
+        "transaction_id": prepared["request"]["transaction_id"],
+        "request_fingerprint": prepared["fingerprint"],
+        "status": "SUCCEEDED",
+        "result": stored_result,
+    }
     monkeypatch.setattr(
         service.database,
         "reserve_or_inspect_provider_operation",
-        lambda *args: {"decision": "REPLAY", "operation": {
-            "status": "SUCCEEDED",
-            "result": stored_result,
-        }},
+        lambda *args: {"decision": "REPLAY", "operation": operation},
     )
 
     result = service.run_sandbox_provider_operation(
-        make_transaction(), adapter=SandboxPaymentAdapter()
+        transaction, adapter=adapter
     )
 
     assert result["decision"] == "REPLAY"
     assert result["result"] == stored_result
     assert result["status"] == "SUCCEEDED"
+    assert result["outcome_uncertain"] is False
 
+
+
+@pytest.mark.parametrize(
+    ("target", "field", "bad_value"),
+    [
+        ("result", "status", "RECONCILIATION_REQUIRED"),
+        ("result", "transaction_id", "DIFFERENT-TRANSACTION"),
+        ("result", "fingerprint", "wrong-fingerprint"),
+        ("result", "sandbox", False),
+        ("operation", "idempotency_key", "wrong-idempotency-key"),
+        ("operation", "provider", "wrong-provider"),
+        ("operation", "transaction_id", "DIFFERENT-TRANSACTION"),
+        ("operation", "request_fingerprint", "wrong-fingerprint"),
+    ],
+)
+def test_final_replay_rejects_inconsistent_stored_result(
+    monkeypatch, target, field, bad_value
+):
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+
+    stored_result = {
+        "provider": prepared["provider"],
+        "sandbox": True,
+        "transaction_id": prepared["request"]["transaction_id"],
+        "idempotency_key": prepared["idempotency_key"],
+        "fingerprint": prepared["fingerprint"],
+        "status": "SIMULATED_SUCCESS",
+    }
+    operation = {
+        "idempotency_key": prepared["idempotency_key"],
+        "provider": prepared["provider"],
+        "transaction_id": prepared["request"]["transaction_id"],
+        "request_fingerprint": prepared["fingerprint"],
+        "status": "SUCCEEDED",
+        "result": stored_result,
+    }
+
+    if target == "result":
+        stored_result[field] = bad_value
+    else:
+        operation[field] = bad_value
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {
+            "decision": "REPLAY",
+            "operation": operation,
+        },
+    )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=adapter
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
 
 def test_reservation_database_error_fails_closed(monkeypatch):
     monkeypatch.setattr(

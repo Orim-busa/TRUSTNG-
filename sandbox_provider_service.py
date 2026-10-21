@@ -200,10 +200,57 @@ def run_sandbox_provider_operation(
         }
 
     if decision == "REPLAY":
-        result = (operation or {}).get("result")
+        # A final database status is not sufficient by itself: verify that
+        # the stored operation and result belong to this exact sandbox request.
+        expected_operation = {
+            "idempotency_key": prepared["idempotency_key"],
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+        }
+        expected_result = {
+            "provider": prepared["provider"],
+            "sandbox": True,
+            "transaction_id": prepared["request"]["transaction_id"],
+            "idempotency_key": prepared["idempotency_key"],
+            "fingerprint": prepared["fingerprint"],
+        }
+
+        result = operation.get("result") if isinstance(operation, dict) else None
+        operation_status = (
+            operation.get("status") if isinstance(operation, dict) else None
+        )
+
+        if (
+            not isinstance(operation, dict)
+            or operation_status not in {"SUCCEEDED", "FAILED"}
+            or any(
+                operation.get(field) != value
+                for field, value in expected_operation.items()
+            )
+            or not isinstance(result, dict)
+            or any(
+                result.get(field) != value
+                for field, value in expected_result.items()
+            )
+            or (
+                operation_status == "SUCCEEDED"
+                and result.get("status") != "SIMULATED_SUCCESS"
+            )
+            or (
+                operation_status == "FAILED"
+                and result.get("status") != "FAILED"
+            )
+        ):
+            return _uncertain(
+                "The stored final operation or result failed replay "
+                "identity/status validation. Do not retry blindly.",
+                operation,
+            )
+
         return {
             "decision": "REPLAY",
-            "status": (operation or {}).get("status", "CONFLICT"),
+            "status": operation_status,
             "sandbox": True,
             "outcome_uncertain": False,
             "operation": operation,
