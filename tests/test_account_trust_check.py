@@ -50,3 +50,54 @@ def test_phone_verification_does_not_make_account_safe():
     assert result["account_age_status"] == "UNAVAILABLE"
     assert result["risk_level"] == "UNKNOWN"
     assert result["transfer_authorized"] is False
+
+def test_start_otp_cleans_expired_sessions(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_OTP_MODE", "sandbox")
+
+    with service._lock:
+        original_sessions = service._sessions.copy()
+        service._sessions.clear()
+        service._sessions["expired-test-session"] = {
+            "phone_hash": "expired",
+            "code_hash": "expired",
+            "expires": 0,
+            "attempts": 0,
+            "verified": False,
+        }
+
+    try:
+        started = service.start_sandbox_otp("+2348012345678")
+        with service._lock:
+            assert "expired-test-session" not in service._sessions
+            assert started["verification_id"] in service._sessions
+    finally:
+        with service._lock:
+            service._sessions.clear()
+            service._sessions.update(original_sessions)
+
+
+def test_otp_capacity_preserves_existing_valid_session(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_OTP_MODE", "sandbox")
+    monkeypatch.setattr(service, "MAX_OTP_SESSIONS", 1)
+
+    with service._lock:
+        original_sessions = service._sessions.copy()
+        service._sessions.clear()
+        service._sessions["valid-test-session"] = {
+            "phone_hash": "existing",
+            "code_hash": "existing",
+            "expires": service.time.time() + service.OTP_TTL_SECONDS,
+            "attempts": 0,
+            "verified": False,
+        }
+
+    try:
+        with pytest.raises(RuntimeError, match="capacity reached"):
+            service.start_sandbox_otp("+2348012345678")
+
+        with service._lock:
+            assert list(service._sessions) == ["valid-test-session"]
+    finally:
+        with service._lock:
+            service._sessions.clear()
+            service._sessions.update(original_sessions)

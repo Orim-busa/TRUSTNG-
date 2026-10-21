@@ -7,6 +7,7 @@ from threading import Lock
 
 OTP_TTL_SECONDS = 300
 OTP_MAX_ATTEMPTS = 5
+MAX_OTP_SESSIONS = 1000
 _sessions = {}
 _lock = Lock()
 
@@ -16,11 +17,22 @@ def start_sandbox_otp(phone_number):
         raise RuntimeError("An authorized OTP provider is not configured.")
     verification_id = secrets.token_urlsafe(24)
     code = f"{secrets.randbelow(1_000_000):06d}"
+    now = time.time()
     with _lock:
+        expired = [
+            key for key, value in _sessions.items()
+            if now >= value["expires"]
+        ]
+        for key in expired:
+            _sessions.pop(key, None)
+        if len(_sessions) >= MAX_OTP_SESSIONS:
+            raise RuntimeError(
+                "Sandbox OTP session capacity reached; try again later."
+            )
         _sessions[verification_id] = {
             "phone_hash": hashlib.sha256(phone_number.strip().encode()).hexdigest(),
             "code_hash": hashlib.sha256(code.encode()).hexdigest(),
-            "expires": time.time() + OTP_TTL_SECONDS,
+            "expires": now + OTP_TTL_SECONDS,
             "attempts": 0,
             "verified": False,
         }
