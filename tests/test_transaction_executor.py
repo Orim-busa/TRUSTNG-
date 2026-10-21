@@ -125,3 +125,84 @@ def test_persistent_simulation_is_blocked_if_status_recording_fails(monkeypatch)
     assert result["simulation"] is True
     assert result["funds_moved"] is False
     assert "must not be retried automatically" in result["reason"]
+
+
+def test_database_claim_exception_fails_closed(monkeypatch):
+    import transaction_executor
+
+    transaction_id = "EXEC-CLAIM-ERROR-001"
+    calls = []
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+
+    def fail_claim(value):
+        calls.append(("claim", value))
+        raise RuntimeError("simulated database error")
+
+    def mark_simulated(value):
+        calls.append(("mark_simulated", value))
+        return True
+
+    monkeypatch.setattr(
+        transaction_executor.database,
+        "claim_transaction_execution",
+        fail_claim,
+    )
+    monkeypatch.setattr(
+        transaction_executor.database,
+        "mark_transaction_execution_simulated",
+        mark_simulated,
+    )
+
+    result = execute_transaction(
+        make_transaction(transaction_id),
+        {"execution_allowed": True, "status": "READY_FOR_EXECUTION"},
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert "duplicate protection is unavailable" in result["reason"]
+    assert calls == [("claim", transaction_id)]
+
+
+def test_simulation_status_exception_fails_closed(monkeypatch):
+    import transaction_executor
+
+    transaction_id = "EXEC-MARK-ERROR-001"
+    calls = []
+
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test-only")
+
+    def claim(value):
+        calls.append(("claim", value))
+        return True
+
+    def fail_mark(value):
+        calls.append(("mark_simulated", value))
+        raise RuntimeError("simulated database error")
+
+    monkeypatch.setattr(
+        transaction_executor.database,
+        "claim_transaction_execution",
+        claim,
+    )
+    monkeypatch.setattr(
+        transaction_executor.database,
+        "mark_transaction_execution_simulated",
+        fail_mark,
+    )
+
+    result = execute_transaction(
+        make_transaction(transaction_id),
+        {"execution_allowed": True, "status": "READY_FOR_EXECUTION"},
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert result["simulation"] is True
+    assert result["funds_moved"] is False
+    assert "must not be retried automatically" in result["reason"]
+    assert calls == [
+        ("claim", transaction_id),
+        ("mark_simulated", transaction_id),
+    ]
