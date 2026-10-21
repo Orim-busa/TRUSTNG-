@@ -741,3 +741,58 @@ def test_uncertain_simulated_success_must_not_be_persisted_as_succeeded(
     assert persisted.get("status") != "SUCCEEDED"
     assert update_calls
     assert update_calls[0][0][1] == "RECONCILIATION_REQUIRED"
+
+
+def test_recovered_uncertain_success_requires_reconciliation(monkeypatch):
+    """Recovery must not persist uncertain success as a final success."""
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+    update_calls = []
+
+    class UncertainRecoveryAdapter(SandboxPaymentAdapter):
+        def inspect(self, transaction):
+            details = self.prepare(transaction)
+            return {
+                "provider": details["provider"],
+                "sandbox": True,
+                "transaction_id": details["request"]["transaction_id"],
+                "idempotency_key": details["idempotency_key"],
+                "fingerprint": details["fingerprint"],
+                "status": "SIMULATED_SUCCESS",
+                "outcome_uncertain": True,
+            }
+
+        def submit(self, transaction, **kwargs):
+            raise AssertionError("Recovery must never resubmit")
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {
+            "decision": "CHECK_PROVIDER_STATUS",
+            "operation": {"status": "PENDING"},
+        },
+    )
+
+    def update_status(*args, **kwargs):
+        update_calls.append((args, kwargs))
+        return True
+
+    monkeypatch.setattr(
+        service.database, "update_provider_operation_status", update_status
+    )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=UncertainRecoveryAdapter()
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+    assert update_calls
+    assert update_calls[0][0][1] == "RECONCILIATION_REQUIRED"
+    assert all(
+        call[0][1] != "SUCCEEDED"
+        for call in update_calls
+    )
