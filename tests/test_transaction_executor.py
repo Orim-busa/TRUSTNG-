@@ -206,3 +206,28 @@ def test_simulation_status_exception_fails_closed(monkeypatch):
         ("claim", transaction_id),
         ("mark_simulated", transaction_id),
     ]
+
+def test_reused_transaction_id_with_changed_details_is_blocked(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    transaction_id = "EXEC-ID-REUSE-001"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    original = make_transaction(transaction_id)
+    changed = original.model_copy(
+        update={"receiver": "receiver_different", "amount": 99999}
+    )
+    approved = {
+        "execution_allowed": True,
+        "status": "READY_FOR_EXECUTION",
+    }
+
+    first_result = execute_transaction(original, approved)
+    second_result = execute_transaction(changed, approved)
+
+    assert first_result["status"] == "SIMULATED_EXECUTION"
+    assert first_result["funds_moved"] is False
+    assert second_result["status"] == "DUPLICATE"
+    assert second_result["executed"] is False
+
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
