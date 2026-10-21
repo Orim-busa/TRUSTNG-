@@ -10,6 +10,7 @@ load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import database
 import dashboard_service
+import account_trust_check as account_trust_check
 import research_promotion
 
 from fastapi import FastAPI, Header, HTTPException
@@ -582,6 +583,61 @@ def get_fraud_case_audit(case_id: str):
 @app.get("/audit/integrity")
 def verify_audit_integrity():
     return verify_all_audit_events()
+
+
+
+
+@app.post("/v1/account-trust/otp/start")
+def account_trust_otp_start(
+    request: account_trust_check.AccountTrustOTPStartRequest,
+):
+    try:
+        return account_trust_check.start_sandbox_otp(request.phone_number)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@app.post("/v1/account-trust/otp/verify")
+def account_trust_otp_verify(
+    request: account_trust_check.AccountTrustOTPVerifyRequest,
+):
+    if not account_trust_check.verify_sandbox_otp(
+        request.verification_id, request.code
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid, expired, exhausted, or already-used verification code.",
+        )
+    return {
+        "verified": True,
+        "mode": "SANDBOX",
+        "message": "Sandbox code accepted; this does not verify a bank account.",
+    }
+
+
+@app.post("/v1/account-trust/check")
+def account_trust_check_endpoint(
+    request: account_trust_check.AccountTrustCheckRequest,
+):
+    phone_verified = False
+    if request.verification_id:
+        phone_verified = account_trust_check.consume_verified_sandbox_otp(
+            request.verification_id, request.phone_number
+        )
+        if not phone_verified:
+            raise HTTPException(
+                status_code=400,
+                detail="Phone verification is invalid, expired, or already consumed.",
+            )
+
+    try:
+        return account_trust_check.assess_account_trust(
+            request.country,
+            request.account_identifier,
+            phone_verified=phone_verified,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 @app.get("/v1/health")

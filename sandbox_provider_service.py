@@ -347,6 +347,11 @@ def run_sandbox_provider_operation(
         except Exception:
             result = {"status": "NOT_FOUND"}
 
+        # A provider adapter is not guaranteed to return a valid dictionary.
+        # Treat malformed recovery data as unavailable and fail closed.
+        if not isinstance(result, dict):
+            result = {"status": "NOT_FOUND"}
+
         if result.get("status") == "IDEMPOTENCY_CONFLICT":
             return {
                 "decision": "CONFLICT",

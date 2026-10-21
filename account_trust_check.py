@@ -1,0 +1,123 @@
+"""Advisory-only Account Trust Check with sandbox OTP."""
+import hashlib
+import os
+import secrets
+import time
+from threading import Lock
+
+OTP_TTL_SECONDS = 300
+OTP_MAX_ATTEMPTS = 5
+_sessions = {}
+_lock = Lock()
+
+
+def start_sandbox_otp(phone_number):
+    if os.environ.get("TRUSTNG_OTP_MODE", "sandbox").lower() != "sandbox":
+        raise RuntimeError("An authorized OTP provider is not configured.")
+    verification_id = secrets.token_urlsafe(24)
+    code = f"{secrets.randbelow(1_000_000):06d}"
+    with _lock:
+        _sessions[verification_id] = {
+            "phone_hash": hashlib.sha256(phone_number.strip().encode()).hexdigest(),
+            "code_hash": hashlib.sha256(code.encode()).hexdigest(),
+            "expires": time.time() + OTP_TTL_SECONDS,
+            "attempts": 0,
+            "verified": False,
+        }
+    return {
+        "verification_id": verification_id,
+        "status": "SANDBOX_CODE_ISSUED",
+        "mode": "SANDBOX",
+        "message": "No SMS was sent. This is a sandbox-only code.",
+        "sandbox_code": code,
+        "expires_in_seconds": OTP_TTL_SECONDS,
+    }
+
+
+def verify_sandbox_otp(verification_id, code):
+    with _lock:
+        session = _sessions.get(verification_id)
+        if not session or session["verified"]:
+            return False
+        if time.time() >= session["expires"]:
+            _sessions.pop(verification_id, None)
+            return False
+        if session["attempts"] >= OTP_MAX_ATTEMPTS:
+            _sessions.pop(verification_id, None)
+            return False
+        session["attempts"] += 1
+        valid = secrets.compare_digest(
+            session["code_hash"], hashlib.sha256(code.encode()).hexdigest()
+        )
+        if valid:
+            session["verified"] = True
+            return True
+        if session["attempts"] >= OTP_MAX_ATTEMPTS:
+            _sessions.pop(verification_id, None)
+        return False
+
+
+def assess_account_trust(country, account_identifier, phone_verified=False):
+    country = country.strip().upper()
+    account = account_identifier.strip()
+    if len(country) != 2 or not country.isalpha():
+        raise ValueError("Country must be a two-letter country code.")
+    if not account.isdigit() or not 5 <= len(account) <= 64:
+        raise ValueError("Account identifier must contain 5–64 digits.")
+
+    account_reference = secrets.token_hex(6)
+    return {
+        "country": country,
+        "account_reference": account_reference,
+        "account_age_status": "UNAVAILABLE",
+        "account_age_days": None,
+        "phone_verification": "SANDBOX_VERIFIED" if phone_verified else "NOT_VERIFIED",
+        "risk_level": "UNKNOWN",
+        "recommendation": "CAUTION_REVIEW",
+        "reasons": [
+            "No authorized bank-data provider is connected; account age is unavailable.",
+            "An account number alone cannot establish ownership or trustworthiness.",
+            (
+                "Sandbox phone verification does not establish bank-account ownership."
+                if phone_verified else "Phone ownership has not been verified."
+            ),
+        ],
+        "provider_status": "NOT_CONNECTED",
+        "advisory_only": True,
+        "transfer_authorized": False,
+        "transfer_executed": False,
+    }
+
+
+from pydantic import BaseModel, Field
+
+
+class AccountTrustOTPStartRequest(BaseModel):
+    phone_number: str = Field(min_length=7, max_length=20)
+
+
+class AccountTrustOTPVerifyRequest(BaseModel):
+    verification_id: str = Field(min_length=20, max_length=100)
+    code: str = Field(pattern=r"^[0-9]{6}$")
+
+
+class AccountTrustCheckRequest(BaseModel):
+    country: str = Field(default="NG", min_length=2, max_length=2)
+    account_identifier: str = Field(min_length=5, max_length=64)
+    phone_number: str = Field(min_length=7, max_length=20)
+    verification_id: str | None = Field(default=None, max_length=100)
+
+
+def consume_verified_sandbox_otp(verification_id, phone_number):
+    phone_hash = hashlib.sha256(phone_number.strip().encode()).hexdigest()
+    with _lock:
+        session = _sessions.get(verification_id)
+        if not session or not session["verified"]:
+            return False
+        if time.time() >= session["expires"]:
+            _sessions.pop(verification_id, None)
+            return False
+        if not secrets.compare_digest(session["phone_hash"], phone_hash):
+            return False
+        _sessions.pop(verification_id, None)
+        return True

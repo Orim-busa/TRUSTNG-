@@ -871,3 +871,57 @@ def test_persistence_race_rejects_mismatched_final_record(monkeypatch):
     assert recovered["decision"] == "RECONCILE"
     assert recovered["status"] == "RECONCILIATION_REQUIRED"
     assert recovered["outcome_uncertain"] is True
+
+
+
+def test_malformed_inspect_results_require_reconciliation(monkeypatch):
+    """Malformed recovery data must never trigger another submission."""
+    transaction = make_transaction()
+    real_adapter = SandboxPaymentAdapter()
+    updates = []
+
+    class MalformedInspectAdapter:
+        def __init__(self, response):
+            self.response = response
+
+        def prepare(self, value):
+            return real_adapter.prepare(value)
+
+        def inspect(self, value):
+            return self.response
+
+        def submit(self, *args, **kwargs):
+            raise AssertionError("Recovery must never resubmit")
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {
+            "decision": "CHECK_PROVIDER_STATUS",
+            "operation": {"status": "PENDING"},
+        },
+    )
+
+    def record_update(*args, **kwargs):
+        updates.append((args, kwargs))
+        return True
+
+    monkeypatch.setattr(
+        service.database, "update_provider_operation_status", record_update
+    )
+
+    for malformed_response in (None, [], "unexpected response"):
+        result = service.run_sandbox_provider_operation(
+            transaction,
+            adapter=MalformedInspectAdapter(malformed_response),
+        )
+
+        assert result["decision"] == "RECONCILE"
+        assert result["status"] == "RECONCILIATION_REQUIRED"
+        assert result["outcome_uncertain"] is True
+
+    assert len(updates) == 3
+    assert all(
+        call[0][1] == "RECONCILIATION_REQUIRED"
+        for call in updates
+    )
