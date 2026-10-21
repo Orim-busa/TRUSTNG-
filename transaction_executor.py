@@ -1,5 +1,6 @@
 
 import os
+import threading
 from datetime import datetime, timezone
 
 import database
@@ -7,6 +8,7 @@ import database
 
 # Local duplicate protection when PostgreSQL is not configured.
 EXECUTED_TRANSACTIONS = set()
+EXECUTED_TRANSACTIONS_LOCK = threading.Lock()
 
 
 def execute_transaction(transaction, execution_check):
@@ -79,14 +81,16 @@ def execute_transaction(transaction, execution_check):
 
     else:
         # Local testing mode without PostgreSQL.
-        if transaction_id in EXECUTED_TRANSACTIONS:
-            return {
-                "executed": False,
-                "status": "DUPLICATE",
-                "reason": "Transaction has already been executed",
-            }
+        # Keep checking and claiming atomic across threads.
+        with EXECUTED_TRANSACTIONS_LOCK:
+            if transaction_id in EXECUTED_TRANSACTIONS:
+                return {
+                    "executed": False,
+                    "status": "DUPLICATE",
+                    "reason": "Transaction has already been executed",
+                }
 
-        EXECUTED_TRANSACTIONS.add(transaction_id)
+            EXECUTED_TRANSACTIONS.add(transaction_id)
 
     # 5. Prepare the simulated execution result.
     result = {
