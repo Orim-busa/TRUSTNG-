@@ -54,14 +54,42 @@ def execute_transaction(transaction, execution_check):
             "reason": "Transaction did not pass the Execution Gate",
         }
 
-    # 3. Require a transaction ID.
-    transaction_id = transaction.transaction_id
+    # 3. Validate and capture transaction data before claiming its ID.
+    try:
+        transaction_id = transaction.transaction_id
+        if not transaction_id:
+            return {
+                "executed": False,
+                "status": "BLOCKED",
+                "reason": "Transaction ID is missing",
+            }
 
-    if not transaction_id:
+        sender = transaction.sender
+        receiver = transaction.receiver
+        asset = transaction.asset
+        amount = transaction.amount
+
+        result = {
+            "executed": False,
+            "status": "SIMULATED_EXECUTION",
+            "simulation": True,
+            "funds_moved": False,
+            "message": (
+                "Simulation only. No real payment provider was called "
+                "and no funds were moved."
+            ),
+            "transaction_id": transaction_id,
+            "sender": sender,
+            "receiver": receiver,
+            "asset": asset,
+            "amount": amount,
+            "simulated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    except Exception:
         return {
             "executed": False,
             "status": "BLOCKED",
-            "reason": "Transaction ID is missing",
+            "reason": "Transaction data could not be validated",
         }
 
     # 4. Claim the transaction ID to prevent duplicate execution.
@@ -101,25 +129,7 @@ def execute_transaction(transaction, execution_check):
 
             EXECUTED_TRANSACTIONS.add(transaction_id)
 
-    # 5. Prepare the simulated execution result.
-    result = {
-        "executed": False,
-        "status": "SIMULATED_EXECUTION",
-        "simulation": True,
-        "funds_moved": False,
-        "message": (
-            "Simulation only. No real payment provider was called "
-            "and no funds were moved."
-        ),
-        "transaction_id": transaction_id,
-        "sender": transaction.sender,
-        "receiver": transaction.receiver,
-        "asset": transaction.asset,
-        "amount": transaction.amount,
-        "simulated_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    # 6. Record simulation status without marking a payment executed.
+    # 5. Record simulation status without marking a payment executed.
     if database_enabled:
         try:
             recorded = database.mark_transaction_execution_simulated(

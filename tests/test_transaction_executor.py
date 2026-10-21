@@ -297,3 +297,27 @@ def test_execution_check_dict_subclass_is_blocked(monkeypatch):
     assert result["status"] == "BLOCKED"
     assert "invalid" in result["reason"].lower()
     assert transaction_id not in EXECUTED_TRANSACTIONS
+
+
+def test_invalid_transaction_data_is_blocked_before_claim(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    transaction_id = "EXEC-INVALID-TRANSACTION-DATA"
+    EXECUTED_TRANSACTIONS.discard(transaction_id)
+
+    class BrokenTransaction:
+        def __init__(self):
+            self.transaction_id = transaction_id
+
+        @property
+        def sender(self):
+            raise RuntimeError("transaction data unavailable")
+
+    result = execute_transaction(
+        BrokenTransaction(),
+        {"execution_allowed": True, "status": "READY_FOR_EXECUTION"},
+    )
+
+    assert result["executed"] is False
+    assert result["status"] == "BLOCKED"
+    assert "could not be validated" in result["reason"]
+    assert transaction_id not in EXECUTED_TRANSACTIONS
