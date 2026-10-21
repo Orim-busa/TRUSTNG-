@@ -606,7 +606,25 @@ def developer_api_health():
     }
 
 
-@app.post("/v1/transactions/check")
+@app.post(
+    "/v1/transactions/check",
+    responses={
+        401: {
+            "description": "Missing or invalid X-API-Key.",
+        },
+        409: {
+            "description": (
+                "Transaction ID conflict or evaluation is still processing."
+            ),
+        },
+        503: {
+            "description": (
+                "API key configuration is missing or evaluation requires "
+                "reconciliation before completion."
+            ),
+        },
+    },
+)
 def developer_transaction_check(
     transaction: Transaction,
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),

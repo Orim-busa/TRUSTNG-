@@ -348,6 +348,18 @@ def test_openapi_documents_api_key_for_protected_routes():
         assert operation["security"] == [{"APIKeyHeader": []}]
 
 
+def test_openapi_documents_transaction_check_error_responses():
+    schema = app.openapi()
+    operation = schema["paths"]["/v1/transactions/check"]["post"]
+    responses = operation["responses"]
+
+    assert {"200", "401", "409", "422", "503"} <= set(responses)
+
+    assert "API-Key" in responses["401"]["description"]
+    assert "conflict" in responses["409"]["description"].lower()
+    assert "reconciliation" in responses["503"]["description"].lower()
+
+
 def test_openapi_keeps_public_routes_unauthenticated():
     schema = app.openapi()
 
