@@ -679,3 +679,65 @@ def test_concurrent_requests_submit_only_once(monkeypatch):
         result.get("decision") == "COMPLETED"
         for result in results
     )
+
+
+def test_uncertain_simulated_success_must_not_be_persisted_as_succeeded(
+    monkeypatch,
+):
+    """A contradictory success result must fail closed."""
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+    update_calls = []
+    persisted = {}
+
+    class ContradictoryAdapter(SandboxPaymentAdapter):
+        def submit(self, transaction, **kwargs):
+            details = self.prepare(transaction)
+            return {
+                "provider": details["provider"],
+                "sandbox": True,
+                "transaction_id": details["request"]["transaction_id"],
+                "idempotency_key": details["idempotency_key"],
+                "fingerprint": details["fingerprint"],
+                "status": "SIMULATED_SUCCESS",
+                "outcome_uncertain": True,
+            }
+
+    def update_status(*args, **kwargs):
+        update_calls.append((args, kwargs))
+        persisted["status"] = args[1]
+        persisted["result"] = args[2]
+        return True
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {"decision": "RESERVED", "operation": None},
+    )
+    monkeypatch.setattr(
+        service.database, "update_provider_operation_status", update_status
+    )
+    monkeypatch.setattr(
+        service.database,
+        "get_provider_operation",
+        lambda key: {
+            "idempotency_key": key,
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+            "status": persisted.get("status", "PENDING"),
+            "result": persisted.get("result"),
+        },
+    )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=ContradictoryAdapter()
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+    assert persisted.get("status") != "SUCCEEDED"
+    assert update_calls
+    assert update_calls[0][0][1] == "RECONCILIATION_REQUIRED"

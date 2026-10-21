@@ -53,6 +53,32 @@ def _persist_sandbox_result(prepared, result):
 
     status = result.get("status")
 
+    # A success status cannot override an explicit or missing uncertainty
+    # signal. Fail closed and require reconciliation instead.
+    if (
+        status == "SIMULATED_SUCCESS"
+        and result.get("outcome_uncertain") is not False
+    ):
+        try:
+            database.update_provider_operation_status(
+                prepared["idempotency_key"],
+                "RECONCILIATION_REQUIRED",
+                {
+                    "reason": (
+                        "The sandbox reported success without explicitly "
+                        "confirming a certain outcome."
+                    ),
+                    "result": result,
+                },
+            )
+        except Exception:
+            pass
+
+        return _uncertain(
+            "The sandbox result reports success but does not confirm "
+            "that the outcome is certain. Do not retry blindly."
+        )
+
     if status == "SIMULATED_SUCCESS":
         target_status = "SUCCEEDED"
         authoritative = True
