@@ -167,6 +167,7 @@ def test_final_result_is_replayed_without_submission(monkeypatch):
         "idempotency_key": prepared["idempotency_key"],
         "fingerprint": prepared["fingerprint"],
         "status": "SIMULATED_SUCCESS",
+        "outcome_uncertain": False,
     }
     operation = {
         "idempotency_key": prepared["idempotency_key"],
@@ -220,6 +221,7 @@ def test_final_replay_rejects_inconsistent_stored_result(
         "idempotency_key": prepared["idempotency_key"],
         "fingerprint": prepared["fingerprint"],
         "status": "SIMULATED_SUCCESS",
+        "outcome_uncertain": False,
     }
     operation = {
         "idempotency_key": prepared["idempotency_key"],
@@ -796,3 +798,42 @@ def test_recovered_uncertain_success_requires_reconciliation(monkeypatch):
         call[0][1] != "SUCCEEDED"
         for call in update_calls
     )
+
+
+def test_final_replay_rejects_uncertain_simulated_success(monkeypatch):
+    """A stored success with an uncertain outcome must not be replayed."""
+    transaction = make_transaction()
+    adapter = SandboxPaymentAdapter()
+    prepared = adapter.prepare(transaction)
+
+    stored_result = {
+        "provider": prepared["provider"],
+        "sandbox": True,
+        "transaction_id": prepared["request"]["transaction_id"],
+        "idempotency_key": prepared["idempotency_key"],
+        "fingerprint": prepared["fingerprint"],
+        "status": "SIMULATED_SUCCESS",
+        "outcome_uncertain": True,
+    }
+    operation = {
+        "idempotency_key": prepared["idempotency_key"],
+        "provider": prepared["provider"],
+        "transaction_id": prepared["request"]["transaction_id"],
+        "request_fingerprint": prepared["fingerprint"],
+        "status": "SUCCEEDED",
+        "result": stored_result,
+    }
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {"decision": "REPLAY", "operation": operation},
+    )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=adapter
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True

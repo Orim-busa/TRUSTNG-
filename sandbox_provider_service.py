@@ -264,6 +264,10 @@ def run_sandbox_provider_operation(
                 and result.get("status") != "SIMULATED_SUCCESS"
             )
             or (
+                operation_status == "SUCCEEDED"
+                and result.get("outcome_uncertain") is not False
+            )
+            or (
                 operation_status == "FAILED"
                 and result.get("status") != "FAILED"
             )
