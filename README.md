@@ -219,3 +219,65 @@ Before inviting partners to rely on TrustNG in production:
 
 TrustNG's risk assessment and simulated execution features must not be
 represented as proof of real payment authorization, execution, or settlement.
+
+## Account Trust (Sandbox)
+
+TrustNG provides an advisory account-trust assessment workflow with sandbox
+phone-verification support. These endpoints do not verify ownership of a bank
+account and do not authorize or execute financial transfers.
+
+### Authentication
+
+All Account Trust endpoints require the `X-API-Key` request header. Keep your
+API key private; never commit it to source control or include it in public
+examples.
+
+Set the API base URL in your shell:
+
+    export TRUSTNG_BASE_URL='https://trustng-api.onrender.com'
+
+Read your API key without displaying it:
+
+    read -rsp 'Enter your TrustNG API key: ' TRUSTNG_API_KEY
+    echo
+    export TRUSTNG_API_KEY
+
+### Available endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/v1/account-trust/otp/start` | Starts a sandbox phone-verification session. |
+| POST | `/v1/account-trust/otp/verify` | Checks a sandbox verification code. |
+| POST | `/v1/account-trust/check` | Returns an advisory account-trust assessment. |
+
+For the exact request fields and response schemas, consult the API
+documentation at `/docs` or the OpenAPI schema at `/openapi.json` on the
+configured API host.
+
+### Sandbox workflow
+
+1. Start verification using the documented request schema for the OTP start
+   endpoint.
+2. In sandbox mode, use the returned sandbox code to test verification.
+3. Submit the verification details to the OTP verification endpoint.
+4. Submit the account-trust assessment request using the documented schema.
+5. Handle the returned assessment as advisory information requiring appropriate
+   human review.
+
+A successfully verified sandbox phone number is not proof of bank-account
+ownership or identity. A verification session is single-use; consumed,
+expired, or invalid sessions must not be reused.
+
+### Current limitations and safety
+
+- Sandbox OTP does not send a real SMS.
+- Sandbox verification is not real-world phone, identity, or bank-account
+  verification.
+- Verification sessions are stored in process memory. They can be lost when
+  the service restarts and are not shared between multiple service instances.
+- The account-trust result is advisory and may require human review.
+- The provider is not connected for real account verification.
+- Account-trust assessment does not authorize or execute a transfer.
+- Do not use sandbox responses as evidence that a real account is trustworthy.
+- Production use requires suitable persistent session storage, rate limiting,
+  monitoring, real verification-provider integration, and security review.
