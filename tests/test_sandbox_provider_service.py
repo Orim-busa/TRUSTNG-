@@ -78,7 +78,11 @@ def test_existing_pending_with_recoverable_result_does_not_resubmit(
         service.database,
         "reserve_or_inspect_provider_operation",
         lambda *args: {"decision": "CHECK_PROVIDER_STATUS", "operation": {
-            "status": "PENDING"
+            "idempotency_key": args[0],
+            "provider": args[1],
+            "transaction_id": args[2],
+            "request_fingerprint": args[3],
+            "status": "PENDING",
         }},
     )
 
@@ -113,13 +117,98 @@ def test_existing_pending_with_recoverable_result_does_not_resubmit(
     assert len(calls) == 1
 
 
+
+
+@pytest.mark.parametrize(
+    "operation_factory",
+    [
+        pytest.param(lambda prepared: None, id="missing-operation"),
+        pytest.param(lambda prepared: [], id="wrong-operation-type"),
+        pytest.param(
+            lambda prepared: {
+                "status": "PENDING",
+                "idempotency_key": "different-key",
+                "provider": prepared["provider"],
+                "transaction_id": prepared["request"]["transaction_id"],
+                "request_fingerprint": prepared["fingerprint"],
+            },
+            id="wrong-idempotency-key",
+        ),
+        pytest.param(
+            lambda prepared: {
+                "status": "PENDING",
+                "idempotency_key": prepared["idempotency_key"],
+                "provider": prepared["provider"],
+                "transaction_id": "different-transaction",
+                "request_fingerprint": prepared["fingerprint"],
+            },
+            id="wrong-transaction",
+        ),
+        pytest.param(
+            lambda prepared: {
+                "status": "SUCCEEDED",
+                "idempotency_key": prepared["idempotency_key"],
+                "provider": prepared["provider"],
+                "transaction_id": prepared["request"]["transaction_id"],
+                "request_fingerprint": prepared["fingerprint"],
+            },
+            id="not-pending",
+        ),
+    ],
+)
+def test_invalid_pending_reservation_fails_closed_without_inspection(
+    monkeypatch, operation_factory
+):
+    transaction = make_transaction()
+    prepared = SandboxPaymentAdapter().prepare(transaction)
+    updates = []
+
+    monkeypatch.setattr(
+        service.database,
+        "reserve_or_inspect_provider_operation",
+        lambda *args: {
+            "decision": "CHECK_PROVIDER_STATUS",
+            "operation": operation_factory(prepared),
+        },
+    )
+    monkeypatch.setattr(
+        service.database,
+        "update_provider_operation_status",
+        lambda *args, **kwargs: updates.append((args, kwargs)) or True,
+    )
+
+    class NeverInspectAdapter(SandboxPaymentAdapter):
+        def inspect(self, *args, **kwargs):
+            raise AssertionError(
+                "Invalid reservation must be rejected before inspection"
+            )
+
+        def submit(self, *args, **kwargs):
+            raise AssertionError(
+                "Invalid reservation must never trigger submission"
+            )
+
+    result = service.run_sandbox_provider_operation(
+        transaction, adapter=NeverInspectAdapter()
+    )
+
+    assert result["decision"] == "RECONCILE"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
+    assert updates == []
+
+
 def test_existing_pending_without_result_requires_reconciliation(monkeypatch):
     updates = []
     monkeypatch.setattr(
         service.database,
         "reserve_or_inspect_provider_operation",
         lambda *args: {"decision": "CHECK_PROVIDER_STATUS", "operation": {
-            "status": "PENDING"
+            "idempotency_key": args[0],
+            "provider": args[1],
+            "transaction_id": args[2],
+            "request_fingerprint": args[3],
+            "status": "PENDING",
         }},
     )
     monkeypatch.setattr(
@@ -325,7 +414,13 @@ def test_recovered_result_with_wrong_fingerprint_is_not_accepted(monkeypatch):
         "reserve_or_inspect_provider_operation",
         lambda *args: {
             "decision": "CHECK_PROVIDER_STATUS",
-            "operation": {"status": "PENDING"},
+            "operation": {
+                "idempotency_key": args[0],
+                "provider": args[1],
+                "transaction_id": args[2],
+                "request_fingerprint": args[3],
+                "status": "PENDING",
+            },
         },
     )
     monkeypatch.setattr(
@@ -380,7 +475,13 @@ def test_restart_after_persistence_failure_never_resubmits(monkeypatch):
             return {"decision": "RESERVED", "operation": None}
         return {
             "decision": "CHECK_PROVIDER_STATUS",
-            "operation": {"status": "PENDING"},
+            "operation": {
+                "idempotency_key": args[0],
+                "provider": args[1],
+                "transaction_id": args[2],
+                "request_fingerprint": args[3],
+                "status": "PENDING",
+            },
         }
 
     def fail_persistence(*args, **kwargs):
@@ -454,7 +555,13 @@ def test_recovery_persists_reconciliation_when_database_returns(monkeypatch):
 
         return {
             "decision": "CHECK_PROVIDER_STATUS",
-            "operation": {"status": "PENDING"},
+            "operation": {
+                "idempotency_key": args[0],
+                "provider": args[1],
+                "transaction_id": args[2],
+                "request_fingerprint": args[3],
+                "status": "PENDING",
+            },
         }
 
     def update_status(*args, **kwargs):
@@ -626,7 +733,13 @@ def test_concurrent_requests_submit_only_once(monkeypatch):
 
             return {
                 "decision": "CHECK_PROVIDER_STATUS",
-                "operation": {"status": "PENDING"},
+                "operation": {
+                    "idempotency_key": args[0],
+                    "provider": args[1],
+                    "transaction_id": args[2],
+                    "request_fingerprint": args[3],
+                    "status": "PENDING",
+                },
             }
 
     monkeypatch.setattr(
@@ -773,7 +886,13 @@ def test_recovered_uncertain_success_requires_reconciliation(monkeypatch):
         "reserve_or_inspect_provider_operation",
         lambda *args: {
             "decision": "CHECK_PROVIDER_STATUS",
-            "operation": {"status": "PENDING"},
+            "operation": {
+                "idempotency_key": args[0],
+                "provider": args[1],
+                "transaction_id": args[2],
+                "request_fingerprint": args[3],
+                "status": "PENDING",
+            },
         },
     )
 
@@ -898,7 +1017,13 @@ def test_malformed_inspect_results_require_reconciliation(monkeypatch):
         "reserve_or_inspect_provider_operation",
         lambda *args: {
             "decision": "CHECK_PROVIDER_STATUS",
-            "operation": {"status": "PENDING"},
+            "operation": {
+                "idempotency_key": args[0],
+                "provider": args[1],
+                "transaction_id": args[2],
+                "request_fingerprint": args[3],
+                "status": "PENDING",
+            },
         },
     )
 

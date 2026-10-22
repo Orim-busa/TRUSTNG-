@@ -341,6 +341,28 @@ def run_sandbox_provider_operation(
         )
 
     if decision == "CHECK_PROVIDER_STATUS":
+        # Validate the reservation before trusting any recovered provider
+        # result. A malformed or mismatched database response must fail closed.
+        expected_operation = {
+            "idempotency_key": prepared["idempotency_key"],
+            "provider": prepared["provider"],
+            "transaction_id": prepared["request"]["transaction_id"],
+            "request_fingerprint": prepared["fingerprint"],
+        }
+        if (
+            not isinstance(operation, dict)
+            or operation.get("status") != "PENDING"
+            or any(
+                operation.get(field) != value
+                for field, value in expected_operation.items()
+            )
+        ):
+            return _uncertain(
+                "The pending reservation failed identity/status validation. "
+                "No provider inspection or resubmission was attempted.",
+                operation,
+            )
+
         # Never submit again for a pre-existing PENDING reservation.
         try:
             result = adapter.inspect(transaction)
