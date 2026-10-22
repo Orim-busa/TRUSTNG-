@@ -121,10 +121,11 @@ def test_persistent_simulation_is_blocked_if_status_recording_fails(monkeypatch)
     )
 
     assert result["executed"] is False
-    assert result["status"] == "BLOCKED"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
     assert result["simulation"] is True
     assert result["funds_moved"] is False
-    assert "must not be retried automatically" in result["reason"]
+    assert "do not retry automatically" in result["reason"]
 
 
 def test_database_claim_exception_fails_closed(monkeypatch):
@@ -198,10 +199,11 @@ def test_simulation_status_exception_fails_closed(monkeypatch):
     )
 
     assert result["executed"] is False
-    assert result["status"] == "BLOCKED"
+    assert result["status"] == "RECONCILIATION_REQUIRED"
+    assert result["outcome_uncertain"] is True
     assert result["simulation"] is True
     assert result["funds_moved"] is False
-    assert "must not be retried automatically" in result["reason"]
+    assert "do not retry automatically" in result["reason"]
     assert calls == [
         ("claim", transaction_id),
         ("mark_simulated", transaction_id),

@@ -141,13 +141,15 @@ def execute_transaction(transaction, execution_check):
         if not recorded:
             return {
                 "executed": False,
-                "status": "BLOCKED",
+                "status": "RECONCILIATION_REQUIRED",
+                "outcome_uncertain": True,
                 "simulation": True,
                 "funds_moved": False,
                 "reason": (
-                    "Simulation status could not be confirmed. "
-                    "The transaction remains claimed and must not be "
-                    "retried automatically."
+                    "The database claim succeeded, but simulation status "
+                    "could not be confirmed. No real payment was attempted. "
+                    "Inspect the persistent record before taking further "
+                    "action; do not retry automatically."
                 ),
             }
 
