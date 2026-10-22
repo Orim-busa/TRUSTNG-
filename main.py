@@ -593,6 +593,8 @@ def account_trust_otp_start(
 ):
     try:
         return account_trust_check.start_sandbox_otp(request.phone_number)
+    except account_trust_check.OTPStartRateLimitError as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
 

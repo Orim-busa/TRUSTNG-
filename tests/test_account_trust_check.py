@@ -101,3 +101,81 @@ def test_otp_capacity_preserves_existing_valid_session(monkeypatch):
         with service._lock:
             service._sessions.clear()
             service._sessions.update(original_sessions)
+
+
+
+
+@pytest.fixture(autouse=True)
+def isolate_otp_start_rate_limit_state():
+    with service._lock:
+        original = {
+            key: values.copy()
+            for key, values in service._otp_start_attempts.items()
+        }
+        service._otp_start_attempts.clear()
+
+    try:
+        yield
+    finally:
+        with service._lock:
+            service._otp_start_attempts.clear()
+            service._otp_start_attempts.update(original)
+
+
+def test_otp_start_rate_limit_and_window_expiry(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_OTP_MODE", "sandbox")
+    monkeypatch.setattr(service, "OTP_START_MAX_REQUESTS", 2)
+    monkeypatch.setattr(service, "OTP_START_WINDOW_SECONDS", 60)
+
+    clock = [1000.0]
+    monkeypatch.setattr(service.time, "time", lambda: clock[0])
+
+    with service._lock:
+        old_sessions = service._sessions.copy()
+        old_attempts = {
+            key: values.copy()
+            for key, values in service._otp_start_attempts.items()
+        }
+        service._sessions.clear()
+        service._otp_start_attempts.clear()
+
+    try:
+        phone = "+2348012345678"
+        service.start_sandbox_otp(phone)
+        service.start_sandbox_otp(phone)
+
+        with pytest.raises(service.OTPStartRateLimitError):
+            service.start_sandbox_otp(phone)
+
+        clock[0] += 61
+        assert service.start_sandbox_otp(phone)["mode"] == "SANDBOX"
+    finally:
+        with service._lock:
+            service._sessions.clear()
+            service._sessions.update(old_sessions)
+            service._otp_start_attempts.clear()
+            service._otp_start_attempts.update(old_attempts)
+
+
+def test_otp_start_rate_limit_stores_only_phone_hash(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_OTP_MODE", "sandbox")
+
+    with service._lock:
+        old_attempts = {
+            key: values.copy()
+            for key, values in service._otp_start_attempts.items()
+        }
+        service._otp_start_attempts.clear()
+
+    try:
+        phone = "+2348098765432"
+        service.start_sandbox_otp(phone)
+        phone_hash = service.hashlib.sha256(phone.encode()).hexdigest()
+
+        with service._lock:
+            assert phone_hash in service._otp_start_attempts
+            assert phone not in service._otp_start_attempts
+    finally:
+        with service._lock:
+            service._otp_start_attempts.clear()
+            service._otp_start_attempts.update(old_attempts)

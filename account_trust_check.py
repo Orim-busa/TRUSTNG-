@@ -8,16 +8,26 @@ from threading import Lock
 OTP_TTL_SECONDS = 300
 OTP_MAX_ATTEMPTS = 5
 MAX_OTP_SESSIONS = 1000
+OTP_START_WINDOW_SECONDS = 900
+OTP_START_MAX_REQUESTS = 3
+MAX_OTP_RATE_LIMIT_KEYS = 5000
+
 _sessions = {}
+_otp_start_attempts = {}
 _lock = Lock()
+
+
+class OTPStartRateLimitError(RuntimeError):
+    pass
 
 
 def start_sandbox_otp(phone_number):
     if os.environ.get("TRUSTNG_OTP_MODE", "sandbox").lower() != "sandbox":
         raise RuntimeError("An authorized OTP provider is not configured.")
-    verification_id = secrets.token_urlsafe(24)
-    code = f"{secrets.randbelow(1_000_000):06d}"
+
+    phone_hash = hashlib.sha256(phone_number.strip().encode()).hexdigest()
     now = time.time()
+
     with _lock:
         expired = [
             key for key, value in _sessions.items()
@@ -25,17 +35,53 @@ def start_sandbox_otp(phone_number):
         ]
         for key in expired:
             _sessions.pop(key, None)
+
+        stale_hashes = [
+            key for key, timestamps in _otp_start_attempts.items()
+            if not timestamps
+            or now - timestamps[-1] >= OTP_START_WINDOW_SECONDS
+        ]
+        for key in stale_hashes:
+            _otp_start_attempts.pop(key, None)
+
         if len(_sessions) >= MAX_OTP_SESSIONS:
             raise RuntimeError(
                 "Sandbox OTP session capacity reached; try again later."
             )
+
+        attempts = [
+            timestamp
+            for timestamp in _otp_start_attempts.get(phone_hash, [])
+            if now - timestamp < OTP_START_WINDOW_SECONDS
+        ]
+
+        if len(attempts) >= OTP_START_MAX_REQUESTS:
+            raise OTPStartRateLimitError(
+                "Too many sandbox OTP requests for this phone number; "
+                "try again after the rate-limit window expires."
+            )
+
+        if (
+            phone_hash not in _otp_start_attempts
+            and len(_otp_start_attempts) >= MAX_OTP_RATE_LIMIT_KEYS
+        ):
+            raise RuntimeError(
+                "Sandbox OTP rate-limit capacity reached; try again later."
+            )
+
+        verification_id = secrets.token_urlsafe(24)
+        code = f"{secrets.randbelow(1_000_000):06d}"
         _sessions[verification_id] = {
-            "phone_hash": hashlib.sha256(phone_number.strip().encode()).hexdigest(),
+            "phone_hash": phone_hash,
             "code_hash": hashlib.sha256(code.encode()).hexdigest(),
             "expires": now + OTP_TTL_SECONDS,
             "attempts": 0,
             "verified": False,
         }
+
+        attempts.append(now)
+        _otp_start_attempts[phone_hash] = attempts
+
     return {
         "verification_id": verification_id,
         "status": "SANDBOX_CODE_ISSUED",
