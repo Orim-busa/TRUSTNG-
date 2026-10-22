@@ -254,6 +254,48 @@ For the exact request fields and response schemas, consult the API
 documentation at `/docs` or the OpenAPI schema at `/openapi.json` on the
 configured API host.
 
+### Sandbox request examples
+
+These examples use synthetic test data. Keep your API key private. The
+responses may contain generated sandbox values; use the actual values returned
+by your running service rather than the placeholders below.
+
+Start a sandbox OTP session:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/account-trust/otp/start" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"phone_number":"+2348000000000"}'
+
+Read the returned `verification_id` and sandbox code from the response. No SMS
+is sent in sandbox mode.
+
+Verify the session, replacing both placeholders with the returned values:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/account-trust/otp/verify" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"verification_id":"PASTE_VERIFICATION_ID","code":"PASTE_SIX_DIGIT_CODE"}'
+
+Request an account-trust assessment using the same test phone number and
+verification ID:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/account-trust/check" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"country":"NG","account_identifier":"1234567890","phone_number":"+2348000000000","verification_id":"PASTE_VERIFICATION_ID"}'
+
+Request field requirements:
+
+- OTP start: `phone_number` is required (7–20 characters).
+- OTP verify: `verification_id` and a six-digit `code` are required.
+- Account trust check: `account_identifier` and `phone_number` are required;
+  `country` defaults to `NG` and must be a two-character code when supplied.
+  `verification_id` is optional in the request schema. Supply it when using the
+  OTP workflow.
+- Use synthetic data for sandbox testing. A successful response is not proof
+  of real-world identity, phone ownership, or bank-account ownership.
+
 ### Sandbox workflow
 
 1. Start verification using the documented request schema for the OTP start
