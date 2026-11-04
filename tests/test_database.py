@@ -657,3 +657,52 @@ def test_list_pending_transaction_executions_validates_arguments():
 
     with pytest.raises(ValueError):
         database.list_pending_transaction_executions(limit=201)
+
+def test_list_recent_processed_transactions_uses_bounded_query(monkeypatch):
+    from datetime import datetime, timezone
+
+    executed = {}
+    stored_at = datetime(2026, 10, 23, tzinfo=timezone.utc)
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def execute(self, statement, parameters=None):
+            executed["statement"] = statement
+            executed["parameters"] = parameters
+            return self
+
+        def fetchall(self):
+            return [{
+                "transaction_id": "feed-test-123456",
+                "result": {"decision": {"decision": "REVIEW"}},
+                "stored_at": stored_at,
+            }]
+
+    monkeypatch.setattr(
+        database,
+        "get_database_connection",
+        lambda: FakeConnection(),
+    )
+
+    records = database.list_recent_processed_transactions(limit=12)
+
+    assert executed["parameters"] == (12,)
+    assert "ORDER BY stored_at DESC" in executed["statement"]
+    assert "LIMIT %s" in executed["statement"]
+    assert len(records) == 1
+    assert records[0]["transaction_id"] == "feed-test-123456"
+    assert records[0]["stored_at"] == stored_at.isoformat()
+    assert "fingerprint" not in records[0]
+
+
+def test_list_recent_processed_transactions_rejects_invalid_limit():
+    import pytest
+
+    for value in (0, -1, 101, True, "10"):
+        with pytest.raises(ValueError):
+            database.list_recent_processed_transactions(limit=value)
