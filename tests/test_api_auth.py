@@ -14,6 +14,13 @@ def test_health_endpoint_is_public():
     assert response.status_code == 200
 
 
+def test_terminal_page_is_public():
+    response = client.get("/terminal")
+
+    assert response.status_code == 200
+    assert "Developer API key" in response.text
+
+
 def test_protected_route_rejects_missing_key(monkeypatch):
     monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
 
@@ -556,3 +563,97 @@ def test_failed_evaluation_never_returns_successful_api_response(
     assert detail["transaction_id"] == transaction_id
     assert detail["message"]
     assert detail.get("replayed", False) is expected_replayed
+
+def test_terminal_transaction_feed_requires_api_key(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    response = client.get("/v1/terminal/transactions")
+    assert response.status_code == 401
+
+
+def test_terminal_transaction_feed_redacts_sensitive_fields(monkeypatch):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    monkeypatch.setattr(
+        main.database,
+        "list_recent_processed_transactions",
+        lambda limit: [{
+            "transaction_id": "sensitive-transaction-123456",
+            "stored_at": "2026-10-23T04:00:00+00:00",
+            "fingerprint": ["private-sender", "private-receiver", 5000, "NGN"],
+            "result": {
+                "status": "COMPLETED",
+                "sender": "private-sender",
+                "receiver": "private-receiver",
+                "risk_signals": [{"level": "HIGH"}, {"level": "MEDIUM"}],
+                "decision": {
+                    "decision": "REVIEW",
+                    "risk_level": "HIGH",
+                    "reasons": ["private reason"],
+                },
+                "ai_assessment": {"private": "assessment"},
+            },
+        }],
+    )
+
+    response = client.get(
+        "/v1/terminal/transactions",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["read_only"] is True
+    assert body["count"] == 1
+    item = body["items"][0]
+    assert item["transaction_ref"] == "REDACTED"
+    assert item["decision"] == "REVIEW"
+    assert item["risk_level"] == "HIGH"
+    assert item["risk_signal_count"] == 2
+    serialized = response.text
+    for forbidden in (
+        "sensitive-transaction-123456",
+        "private-sender",
+        "private-receiver",
+        "fingerprint",
+        "private reason",
+        "ai_assessment",
+    ):
+        assert forbidden not in serialized
+
+
+def test_terminal_transaction_feed_rejects_excessive_limit(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    response = client.get(
+        "/v1/terminal/transactions?limit=101",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+    assert response.status_code == 400
+
+
+
+def test_terminal_transaction_feed_handles_database_failure(monkeypatch):
+    import main
+    import psycopg
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    def fail_database_query(limit):
+        raise psycopg.OperationalError("simulated database connection failure")
+
+    monkeypatch.setattr(
+        main.database,
+        "list_recent_processed_transactions",
+        fail_database_query,
+    )
+
+    response = client.get(
+        "/v1/terminal/transactions",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Transaction history is temporarily unavailable."
+    )
+    assert "simulated database connection failure" not in response.text

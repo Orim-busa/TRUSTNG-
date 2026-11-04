@@ -236,6 +236,35 @@ def update_processed_transaction_result(transaction_id, result):
 
     return row is not None
 
+def list_recent_processed_transactions(limit=50):
+    """Return recent stored transaction results for server-side sanitization.
+
+    Fingerprints are deliberately excluded from this query.
+    """
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+
+    with get_database_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT transaction_id, result, stored_at
+            FROM processed_transactions
+            ORDER BY stored_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        ).fetchall()
+
+    return [
+        {
+            "transaction_id": row["transaction_id"],
+            "result": row["result"],
+            "stored_at": row["stored_at"].isoformat(),
+        }
+        for row in rows
+    ]
+
+
 def get_processed_transaction_count():
     """Return the number of stored transaction records."""
 

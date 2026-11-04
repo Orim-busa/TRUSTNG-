@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrustNG | Trading Terminal</title>
+<style>
+:root{color-scheme:dark;--bg:#06101d;--panel:#091a2c;--line:#19334b;
+--muted:#91a9c2;--text:#e5f0ff;--green:#20d9a2;--red:#ff6477;
+--gold:#f7bf4f;--blue:#4bb8ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
+font:13px Inter,ui-sans-serif,system-ui,sans-serif}
+button,input{font:inherit;color:var(--text);background:#061525;border:1px solid #25445f;
+border-radius:5px;padding:9px}button{cursor:pointer}a{color:var(--blue);text-decoration:none}
+header{height:62px;display:flex;align-items:center;gap:22px;padding:0 20px;
+border-bottom:1px solid var(--line);background:#071525;position:sticky;top:0;z-index:3}
+.brand{font-size:20px;font-weight:850;letter-spacing:1px}.brand span{color:var(--green)}
+.sub,.muted{color:var(--muted)}.sub{font-size:11px}.right{margin-left:auto;display:flex;gap:12px;align-items:center}
+.live{color:var(--green)}.live:before{content:"";display:inline-block;width:7px;height:7px;
+background:var(--green);border-radius:50%;margin-right:7px}
+main{padding:14px;max-width:1900px;margin:auto}
+.layout{display:grid;grid-template-columns:174px minmax(0,1fr) 245px;gap:12px}
+.sidebar{border:1px solid var(--line);border-radius:7px;background:#081728;padding:10px}
+.nav{display:block;padding:12px 10px;border-radius:5px;color:#b5c9df;margin-bottom:4px}
+.nav.active,.nav:hover{background:#0c3049;color:#54d6ff}
+.content{min-width:0}.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.panel,.metric{background:linear-gradient(145deg,#0a1d30,#081727);border:1px solid var(--line);
+border-radius:7px;min-width:0}.metric{padding:13px}.metric strong{display:block;font-size:22px;margin:8px 0}
+.label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.green{color:var(--green)}.red{color:var(--red)}.gold{color:var(--gold)}
+.upper{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(250px,1fr);gap:12px}
+.panel{padding:13px;margin-bottom:12px}.panel h2{font-size:13px;margin:0 0 12px}
+.chart{display:block;width:100%;height:290px}.chartnote{font-size:11px;color:var(--muted);margin-top:8px}
+.toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.toolbar button{padding:6px 9px;font-size:11px}
+.toolbar .selected{border-color:var(--blue);color:var(--blue)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 7px;
+border-bottom:1px solid #173047;white-space:nowrap;font-size:11px}th{color:var(--muted);font-weight:500}
+.tablewrap{overflow:auto}.badge{display:inline-block;border-radius:12px;padding:4px 7px;
+background:#102e3b;color:var(--green);font-size:10px}.badge.warn{background:#392d15;color:var(--gold)}
+.badge.bad{background:#3a1c2a;color:var(--red)}
+.feed{max-height:390px;overflow:auto}.event{padding:11px 0;border-bottom:1px solid #173047}
+.event strong{display:block;font-size:12px;margin-bottom:4px}.event small{color:var(--muted)}
+.marketrow{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #173047}
+.marketrow:last-child{border-bottom:0}.keyrow{display:flex;gap:6px}.keyrow input{min-width:0;width:100%}
+.healthline{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #173047}
+.sidehead{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.note{font-size:10px;line-height:1.5;color:var(--muted)}
+footer{padding:12px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
+@media(max-width:1200px){.layout{grid-template-columns:145px minmax(0,1fr)}.rightbar{grid-column:2}
+.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:780px){header{height:auto;min-height:60px;flex-wrap:wrap;padding:12px}
+.layout{display:block}.sidebar{display:flex;overflow:auto;margin-bottom:12px}.nav{white-space:nowrap}
+.upper{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.rightbar{display:grid;grid-template-columns:1fr}.chart{height:230px}}
+</style>
+</head>
+<body>
+<header>
+ <div><div class="brand"><span>TRUST</span>NG</div><div class="sub">FINANCIAL INTELLIGENCE</div></div>
+ <div class="sub">TRANSACTION RISK TERMINAL</div>
+ <div class="right"><span class="live" id="liveStatus">CONNECTING</span><span id="clock" class="muted">--:--:--</span><a href="/dashboard">Dashboard ↗</a></div>
+</header>
+<main>
+<div class="layout">
+ <nav class="sidebar">
+  <a class="nav" href="/dashboard">⌂ Dashboard</a>
+  <a class="nav active" href="/terminal">▥ Trading Terminal</a>
+  <a class="nav" href="#transactions">⇄ Transactions</a>
+  <a class="nav" href="#activity">⬡ Risk & Activity</a>
+  <a class="nav" href="#markets">⌁ Markets</a>
+  <a class="nav" href="#system">⚙ System Health</a>
+  <div style="margin-top:28px" class="note">TRUSTNG MONITORING<br>Human review remains in control. This screen is observational.</div>
+ </nav>
+
+ <section class="content">
+  <div class="metrics">
+   <div class="metric"><div class="label">API status</div><strong id="apiStatus">Checking</strong><span id="apiHint" class="muted">Health endpoint</span></div>
+   <div class="metric"><div class="label">Database</div><strong id="dbStatus">Checking</strong><span class="muted">Reported by backend</span></div>
+   <div class="metric"><div class="label">Transaction feed</div><strong id="txCount">—</strong><span class="muted">Events loaded in this view</span></div>
+   <div class="metric"><div class="label">Risk signals</div><strong id="riskCount">—</strong><span class="muted">From connected data only</span></div>
+   <div class="metric"><div class="label">Indicative USD/NGN</div><strong id="ngn">—</strong><span id="rateStamp" class="muted">Waiting for feed</span></div>
+  </div>
+
+  <div class="upper">
+   <section class="panel">
+    <div class="sidehead">
+     <div><h2>Transaction Activity <span class="muted">(Candlestick View)</span></h2><div class="note">Transaction value aggregated by time bucket; not a market-price chart.</div></div>
+     <div class="toolbar"><button class="selected" disabled>1H</button><button disabled>4H</button><button disabled>1D</button></div>
+    </div>
+    <div id="chartEmpty" style="min-height:260px;display:grid;place-items:center;text-align:center;padding:22px;color:var(--muted)">
+     <div><strong style="color:var(--text)">Waiting for recorded transaction history</strong><p>No fabricated candles are displayed. Connect a real transaction-history/event source to enable this chart.</p></div>
+    </div>
+    <canvas id="candleChart" class="chart" hidden></canvas>
+    <div id="chartNote" class="chartnote">Data source: not connected yet.</div>
+   </section>
+
+   <section class="panel" id="markets">
+    <div class="sidehead"><h2>Market Watch · FX Rates</h2><span class="muted">Indicative</span></div>
+    <div class="marketrow"><span>USD / NGN</span><strong id="mNgn">—</strong></div>
+    <div class="marketrow"><span>USD / ZAR</span><strong id="zar">—</strong></div>
+    <div class="marketrow"><span>USD / EUR</span><strong id="eur">—</strong></div>
+    <div class="marketrow"><span>USD / GBP</span><strong id="gbp">—</strong></div>
+    <p id="rateError" class="note">Loading provider rates…</p>
+    <p class="note">Indicative reference rates, not executable trading prices. <a href="https://www.exchangerate-api.com/docs/free" target="_blank" rel="noreferrer">Source and terms ↗</a></p>
+   </section>
+  </div>
+
+  <section class="panel" id="transactions">
+   <div class="sidehead"><h2>Live Transaction Tape</h2><span id="txFeedStatus" class="muted">No event feed connected</span></div>
+   <div class="tablewrap"><table><thead><tr><th>TIME</th><th>TRANSACTION</th><th>AMOUNT</th><th>ASSET</th><th>RISK</th><th>STATUS</th></tr></thead>
+   <tbody id="txRows"><tr><td colspan="6" class="muted">The live transaction history endpoint has not been connected. This does not mean there are no transactions.</td></tr></tbody></table></div>
+  </section>
+
+  <section class="panel" id="activity">
+   <div class="sidehead"><h2>System Activity</h2><span class="muted">Observed events</span></div>
+   <div id="activityFeed" class="feed"><div class="event"><strong>Terminal started</strong><small>Waiting for TrustNG health response.</small></div></div>
+  </section>
+ </section>
+
+ <aside class="rightbar">
+  <section class="panel">
+   <div class="sidehead"><h2>Live System Events</h2><span class="live">MONITOR</span></div>
+   <div id="eventFeed" class="feed"><div class="event"><strong>Awaiting backend</strong><small>Events appear here when connected.</small></div></div>
+   <p class="note">Only actual observed events will be described as live.</p>
+  </section>
+  <section class="panel">
+   <h2>Connect Protected Dashboard Data</h2>
+   <p class="note">Optional. Your API key stays in this page's memory and is not saved.</p>
+   <div class="keyrow"><input id="apiKey" type="password" autocomplete="off" placeholder="Developer API key"><button id="connectBtn">Connect</button><button id="disconnectBtn" type="button">Clear</button></div>
+   <p id="connectStatus" class="note">Not connected</p>
+   <pre id="summaryData" class="note" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+  </section>
+  <section class="panel" id="system">
+   <h2>Platform Health</h2>
+   <div class="healthline"><span>API</span><strong id="healthApi" class="gold">Checking</strong></div>
+   <div class="healthline"><span>Database</span><strong id="healthDb" class="gold">Checking</strong></div>
+   <div class="healthline"><span>Market feed</span><strong id="healthFx" class="gold">Checking</strong></div>
+   <div class="healthline"><span>Transaction stream</span><strong class="gold">Not connected</strong></div>
+   <p class="note">The terminal does not approve, release or execute transactions.</p>
+  </section>
+ </aside>
+</div>
+</main>
+<footer>TrustNG Terminal · Backend health · Indicative FX · Transaction monitoring · Market data is not financial advice.</footer>
+<script>
+const $ = id => document.getElementById(id);
+const seenHealth = new Set();
+function logEvent(title, detail, target="activityFeed") {
+ const node=document.createElement("div");node.className="event";
+ const strong=document.createElement("strong");strong.textContent=title;
+ const small=document.createElement("small");small.textContent=new Date().toLocaleTimeString()+" · "+detail;
+ node.append(strong,small);$(target).prepend(node);
+ while($(target).children.length>30)$(target).lastElementChild.remove();
+}
+function setStatus(id,value,ok) {
+ $(id).textContent=value;
+ $(id).style.color=ok?"var(--green)":"var(--red)";
+}
+async function checkHealth() {
+ try {
+  const r=await fetch("/v1/health",{cache:"no-store"});
+  if(!r.ok)throw new Error("HTTP "+r.status);
+  const d=await r.json();
+  setStatus("apiStatus",d.status||"Responding",true);
+  setStatus("dbStatus",d.database||"Not reported",String(d.database||"").toLowerCase()==="connected");
+  setStatus("healthApi",d.status||"Responding",true);
+  setStatus("healthDb",d.database||"Not reported",String(d.database||"").toLowerCase()==="connected");
+  $("apiHint").textContent="Last checked "+new Date().toLocaleTimeString();
+  $("liveStatus").textContent="BACKEND REACHABLE";
+  $("liveStatus").style.color="var(--green)";
+  if(!seenHealth.has("ok")){logEvent("TrustNG backend reachable","Health endpoint responded","eventFeed");seenHealth.add("ok");}
+ } catch(e) {
+  setStatus("apiStatus","Unavailable",false);setStatus("dbStatus","Unknown",false);
+  setStatus("healthApi","Unavailable",false);setStatus("healthDb","Unknown",false);
+  $("liveStatus").textContent="CONNECTION ISSUE";$("liveStatus").style.color="var(--red)";
+  if(!seenHealth.has("error")){logEvent("Backend health check failed",e.message,"eventFeed");seenHealth.add("error");}
+ }
+}
+async function loadRates() {
+ try {
+  const r=await fetch("https://open.er-api.com/v6/latest/USD",{cache:"no-store"});
+  if(!r.ok)throw new Error("Provider HTTP "+r.status);
+  const d=await r.json();if(d.result!=="success"||!d.rates)throw new Error("Rate data unavailable");
+  const fmt=v=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:4}):"—";
+  $("ngn").textContent=fmt(d.rates.NGN);$("mNgn").textContent=fmt(d.rates.NGN);
+  $("zar").textContent=fmt(d.rates.ZAR);$("eur").textContent=fmt(d.rates.EUR);$("gbp").textContent=fmt(d.rates.GBP);
+  $("rateStamp").textContent="Provider update received";
+  $("rateError").textContent="Last provider update: "+(d.time_last_update_utc||"timestamp unavailable");
+  setStatus("healthFx","Connected",true);
+ } catch(e) {
+  $("rateError").textContent="Rate feed unavailable: "+e.message;
+  setStatus("healthFx","Unavailable",false);
+ }
+}
+function renderTransactionFeed(data) {
+ const body = $("txRows");
+ body.replaceChildren();
+
+ const items = Array.isArray(data.items) ? data.items : [];
+ $("txCount").textContent = String(items.length);
+ $("riskCount").textContent = String(
+  items.reduce((total, item) => {
+   const count = Number(item.risk_signal_count);
+   return total + (Number.isFinite(count) && count > 0 ? count : 0);
+  }, 0)
+ );
+ $("txFeedStatus").textContent = items.length
+  ? "Authenticated · " + items.length + " records"
+  : "Connected · no stored records returned";
+
+ if (!items.length) {
+  const row = document.createElement("tr");
+  const cell = document.createElement("td");
+  cell.colSpan = 6;
+  cell.className = "muted";
+  cell.textContent = "This feed request returned no stored records. This does not establish that no transactions exist.";
+  row.appendChild(cell);
+  body.appendChild(row);
+  return;
+ }
+
+ for (const item of items) {
+  const row = document.createElement("tr");
+  const storedAt = item.stored_at ? new Date(item.stored_at) : null;
+  const timeText = storedAt && !Number.isNaN(storedAt.getTime())
+   ? storedAt.toLocaleString()
+   : "—";
+
+  const values = [
+   timeText,
+   item.transaction_ref || "••••",
+   "—",
+   "—",
+   [item.risk_level || "UNKNOWN",
+    "(" + (Number(item.risk_signal_count) || 0) + " signals)"].join(" "),
+   [item.status || "RECORDED", item.decision || "UNKNOWN"].join(" · ")
+  ];
+
+  for (const value of values) {
+   const cell = document.createElement("td");
+   cell.textContent = String(value);
+   row.appendChild(cell);
+  }
+  body.appendChild(row);
+ }
+}
+
+let terminalRequestGeneration = 0;
+
+$("connectBtn").addEventListener("click", async () => {
+ const requestGeneration = ++terminalRequestGeneration;
+ const key = $("apiKey").value.trim();
+ $("apiKey").value = "";
+ if (!key) {
+  $("connectStatus").textContent = "Enter your developer API key.";
+  return;
+ }
+
+ const button = $("connectBtn");
+ button.disabled = true;
+ $("summaryData").textContent = "";
+ $("txRows").replaceChildren();
+ $("txCount").textContent = "—";
+ $("riskCount").textContent = "—";
+ $("txFeedStatus").textContent = "Loading protected feed…";
+ $("connectStatus").textContent = "Connecting to protected TrustNG endpoints…";
+
+ try {
+  const headers = {"X-API-Key": key};
+  const [summaryResponse, feedResponse] = await Promise.all([
+   fetch("/v1/dashboard/summary", {
+    headers,
+    cache: "no-store"
+   }),
+   fetch("/v1/terminal/transactions?limit=50", {
+    headers,
+    cache: "no-store"
+   })
+  ]);
+
+  if (summaryResponse.status === 401 || feedResponse.status === 401) {
+   throw new Error("Authentication failed. Check your developer API key.");
+  }
+  if (!summaryResponse.ok) {
+   throw new Error("Dashboard summary returned HTTP " + summaryResponse.status);
+  }
+  if (!feedResponse.ok) {
+   throw new Error("Transaction feed returned HTTP " + feedResponse.status);
+  }
+
+  const [summaryData, feedData] = await Promise.all([
+   summaryResponse.json(),
+   feedResponse.json()
+  ]);
+
+  if (!feedData || feedData.read_only !== true || !Array.isArray(feedData.items)) {
+   throw new Error("Transaction feed response had an unexpected format.");
+  }
+
+  if (requestGeneration !== terminalRequestGeneration) return;
+
+  $("summaryData").textContent = JSON.stringify(summaryData, null, 2);
+  renderTransactionFeed(feedData);
+  $("connectStatus").textContent = "Connected. Protected summary and transaction feed loaded.";
+  logEvent(
+   "Protected transaction feed loaded",
+   feedData.count + " redacted records received",
+   "eventFeed"
+  );
+ } catch (error) {
+  if (requestGeneration !== terminalRequestGeneration) return;
+
+  $("summaryData").textContent = "";
+  $("txRows").replaceChildren();
+  $("txCount").textContent = "—";
+  $("riskCount").textContent = "—";
+  $("txFeedStatus").textContent = "Feed unavailable";
+  $("apiKey").value = "";
+  $("connectStatus").textContent = "Connection failed. Re-enter your API key and try again.";
+  logEvent("Protected feed request failed", error.message, "eventFeed");
+ } finally {
+  $("apiKey").value = "";
+  if (requestGeneration === terminalRequestGeneration) {
+   button.disabled = false;
+  }
+ }
+});
+$("disconnectBtn").addEventListener("click", () => {
+ terminalRequestGeneration++;
+ $("connectBtn").disabled = false;
+ $("apiKey").value = "";
+ $("summaryData").textContent = "";
+ $("eventFeed").replaceChildren();
+ $("txRows").replaceChildren();
+ const row = document.createElement("tr");
+ const cell = document.createElement("td");
+ cell.colSpan = 6;
+ cell.className = "muted";
+ cell.textContent = "Connect to load protected transaction history.";
+ row.appendChild(cell);
+ $("txRows").appendChild(row);
+ $("txCount").textContent = "—";
+ $("riskCount").textContent = "—";
+ $("txFeedStatus").textContent = "Not connected";
+ $("connectStatus").textContent = "Protected data cleared from this page.";
+});
+function clock(){ $("clock").textContent=new Date().toLocaleTimeString(); }
+clock();setInterval(clock,1000);
+checkHealth();loadRates();
+setInterval(checkHealth,15000);
+setInterval(loadRates,300000);
+</script>
+</body>
+</html>

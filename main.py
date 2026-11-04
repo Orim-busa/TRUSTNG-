@@ -812,6 +812,7 @@ async def protect_internal_routes(request, call_next):
         "/openapi.json",
         "/redoc",
         "/docs/oauth2-redirect",
+        "/terminal",
     }
 
     if request.url.path in public_paths:
@@ -885,3 +886,70 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+
+
+# TRUSTNG_TERMINAL_ROUTE
+@app.get("/terminal", response_class=HTMLResponse, include_in_schema=False)
+def trustng_terminal():
+    from pathlib import Path
+    terminal_path = Path(__file__).resolve().with_name("terminal.html")
+    return HTMLResponse(content=terminal_path.read_text(encoding="utf-8"))
+
+@app.get("/v1/terminal/transactions")
+def terminal_transactions(limit: int = 50):
+    """Return a bounded, read-only and redacted transaction activity feed."""
+    if not 1 <= limit <= 100:
+        raise HTTPException(
+            status_code=400,
+            detail="limit must be between 1 and 100",
+        )
+
+    try:
+        records = database.list_recent_processed_transactions(limit=limit)
+    except (RuntimeError, database.psycopg.Error):
+        raise HTTPException(
+            status_code=503,
+            detail="Transaction history is temporarily unavailable.",
+        )
+
+    items = []
+    for record in records:
+        result = record.get("result")
+        if not isinstance(result, dict):
+            result = {}
+
+        # Replays wrap the original assessment in previous_result.
+        assessment = result.get("previous_result")
+        if not isinstance(assessment, dict):
+            assessment = result
+
+        decision_data = assessment.get("decision")
+        if not isinstance(decision_data, dict):
+            decision_data = {}
+
+        # Do not expose transaction-ID fragments in the terminal feed.
+        transaction_ref = "REDACTED"
+
+        signals = assessment.get("risk_signals")
+        signal_count = len(signals) if isinstance(signals, list) else 0
+
+        status = result.get("status") or assessment.get("status") or "RECORDED"
+        decision = decision_data.get("decision") or "UNKNOWN"
+        risk_level = decision_data.get("risk_level") or assessment.get("risk_level") or "UNKNOWN"
+
+        items.append({
+            "transaction_ref": transaction_ref,
+            "stored_at": record.get("stored_at"),
+            "status": str(status)[:40],
+            "decision": str(decision)[:40],
+            "risk_level": str(risk_level)[:20],
+            "risk_signal_count": signal_count,
+        })
+
+    return {
+        "source": "processed_transactions",
+        "count": len(items),
+        "limit": limit,
+        "items": items,
+        "read_only": True,
+    }
