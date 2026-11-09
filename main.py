@@ -16,6 +16,7 @@ import research_promotion
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from models import Transaction, ResearchCandidateReview
 from risk_engine import analyze_transaction
@@ -69,6 +70,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+app.mount("/assets", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "assets"), name="public_assets")
+app.mount("/dijuang", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "dijuang", html=True), name="dijuang_site")
+app.mount("/trustng", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "trustng", html=True), name="trustng_site")
 
 
 @app.get("/", response_class=HTMLResponse)
