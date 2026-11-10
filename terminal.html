@@ -1,354 +1,470 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TrustNG | Trading Terminal</title>
+<meta name="theme-color" content="#080c12">
+<title>TRUSTNG | Financial Intelligence Terminal</title>
 <style>
-:root{color-scheme:dark;--bg:#06101d;--panel:#091a2c;--line:#19334b;
---muted:#91a9c2;--text:#e5f0ff;--green:#20d9a2;--red:#ff6477;
---gold:#f7bf4f;--blue:#4bb8ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
-font:13px Inter,ui-sans-serif,system-ui,sans-serif}
-button,input{font:inherit;color:var(--text);background:#061525;border:1px solid #25445f;
-border-radius:5px;padding:9px}button{cursor:pointer}a{color:var(--blue);text-decoration:none}
-header{height:62px;display:flex;align-items:center;gap:22px;padding:0 20px;
-border-bottom:1px solid var(--line);background:#071525;position:sticky;top:0;z-index:3}
-.brand{font-size:20px;font-weight:850;letter-spacing:1px}.brand span{color:var(--green)}
-.sub,.muted{color:var(--muted)}.sub{font-size:11px}.right{margin-left:auto;display:flex;gap:12px;align-items:center}
-.live{color:var(--green)}.live:before{content:"";display:inline-block;width:7px;height:7px;
-background:var(--green);border-radius:50%;margin-right:7px}
-main{padding:14px;max-width:1900px;margin:auto}
-.layout{display:grid;grid-template-columns:174px minmax(0,1fr) 245px;gap:12px}
-.sidebar{border:1px solid var(--line);border-radius:7px;background:#081728;padding:10px}
-.nav{display:block;padding:12px 10px;border-radius:5px;color:#b5c9df;margin-bottom:4px}
-.nav.active,.nav:hover{background:#0c3049;color:#54d6ff}
-.content{min-width:0}.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:12px}
-.panel,.metric{background:linear-gradient(145deg,#0a1d30,#081727);border:1px solid var(--line);
-border-radius:7px;min-width:0}.metric{padding:13px}.metric strong{display:block;font-size:22px;margin:8px 0}
-.label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
-.green{color:var(--green)}.red{color:var(--red)}.gold{color:var(--gold)}
-.upper{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(250px,1fr);gap:12px}
-.panel{padding:13px;margin-bottom:12px}.panel h2{font-size:13px;margin:0 0 12px}
-.chart{display:block;width:100%;height:290px}.chartnote{font-size:11px;color:var(--muted);margin-top:8px}
-.toolbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.toolbar button{padding:6px 9px;font-size:11px}
-.toolbar .selected{border-color:var(--blue);color:var(--blue)}
-table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px 7px;
-border-bottom:1px solid #173047;white-space:nowrap;font-size:11px}th{color:var(--muted);font-weight:500}
-.tablewrap{overflow:auto}.badge{display:inline-block;border-radius:12px;padding:4px 7px;
-background:#102e3b;color:var(--green);font-size:10px}.badge.warn{background:#392d15;color:var(--gold)}
-.badge.bad{background:#3a1c2a;color:var(--red)}
-.feed{max-height:390px;overflow:auto}.event{padding:11px 0;border-bottom:1px solid #173047}
-.event strong{display:block;font-size:12px;margin-bottom:4px}.event small{color:var(--muted)}
-.marketrow{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #173047}
-.marketrow:last-child{border-bottom:0}.keyrow{display:flex;gap:6px}.keyrow input{min-width:0;width:100%}
-.healthline{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #173047}
-.sidehead{display:flex;justify-content:space-between;gap:8px;align-items:center}
-.note{font-size:10px;line-height:1.5;color:var(--muted)}
-footer{padding:12px 18px;border-top:1px solid var(--line);color:var(--muted);font-size:10px}
-@media(max-width:1200px){.layout{grid-template-columns:145px minmax(0,1fr)}.rightbar{grid-column:2}
-.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(max-width:780px){header{height:auto;min-height:60px;flex-wrap:wrap;padding:12px}
-.layout{display:block}.sidebar{display:flex;overflow:auto;margin-bottom:12px}.nav{white-space:nowrap}
-.upper{grid-template-columns:1fr}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
-.rightbar{display:grid;grid-template-columns:1fr}.chart{height:230px}}
+:root{
+  --bg:#080c12;--panel:#0d141e;--panel2:#111c29;--line:#233142;
+  --text:#dce6f1;--muted:#8292a6;--cyan:#35c9dc;--green:#27ce91;
+  --red:#f05d70;--yellow:#e9b653;--blue:#5c91ed;--purple:#a58bea;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:12px Inter,Arial,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.app{min-height:100vh;display:grid;grid-template-columns:190px minmax(0,1fr)}
+.sidebar{background:#090f17;border-right:1px solid var(--line);padding:15px 10px;display:flex;flex-direction:column;gap:18px}
+.brand{padding:8px;display:flex;align-items:center;gap:10px}
+.brand-mark{width:32px;height:32px;display:grid;place-items:center;background:#12303b;border:1px solid #236171;color:var(--cyan);font-weight:900;font-size:18px}
+.brand strong{font-size:15px;letter-spacing:1.5px}
+.brand small{display:block;color:var(--muted);font-size:8px;letter-spacing:1.6px;margin-top:3px}
+.nav-label{padding:8px;color:#61748a;font-size:9px;letter-spacing:1.6px}
+.nav{display:grid;gap:3px}
+.nav button{background:transparent;border:1px solid transparent;color:#91a1b5;text-align:left;padding:10px 9px;display:flex;gap:9px;align-items:center}
+.nav button:hover,.nav button.active{background:#142333;border-color:#263f55;color:#fff}
+.nav button.active{box-shadow:inset 2px 0 var(--cyan)}
+.nav-icon{width:17px;color:var(--cyan);text-align:center}
+.sidebar-foot{margin-top:auto;padding:11px;border:1px solid var(--line);background:#0d1722;color:var(--muted);font-size:10px;line-height:1.6}
+.sidebar-foot b{color:var(--cyan)}
+main{min-width:0}
+.topbar{height:48px;border-bottom:1px solid var(--line);background:#0b121b;display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:12px}
+.top-left,.top-right{display:flex;align-items:center;gap:14px}
+.terminal-label{font-size:10px;letter-spacing:1.4px;color:#a9b8c9}
+.live-indicator{display:flex;align-items:center;gap:6px;color:var(--green);font-size:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px #27ce9180}
+.topbar button,.btn{border:1px solid #30465c;background:#132337;color:#dce8f5;padding:7px 10px}
+.topbar button:hover,.btn:hover{border-color:var(--cyan)}
+.workspace{padding:12px;max-width:1900px;margin:auto}
+.tickerbar{display:flex;gap:0;overflow-x:auto;border:1px solid var(--line);background:#0b131d;margin-bottom:10px}
+.ticker{min-width:145px;padding:9px 12px;border-right:1px solid var(--line)}
+.ticker span{display:block;color:var(--muted);font-size:9px;margin-bottom:5px}
+.ticker b{font-size:13px}
+.ticker em{font-size:9px;color:var(--muted);font-style:normal;margin-left:5px}
+.page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}
+.page-head h1{font-size:17px;margin:0;letter-spacing:.3px}
+.page-head p{margin:5px 0 0;color:var(--muted);font-size:10px}
+.eyebrow{font-size:9px;color:var(--cyan);letter-spacing:1.8px;margin-bottom:5px}
+.workspace-page{display:none}.workspace-page.active{display:block}
+.grid{display:grid;gap:9px}
+.metrics{grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:9px}
+.metric,.panel{background:var(--panel);border:1px solid var(--line);min-width:0}
+.metric{padding:11px 12px;min-height:76px}
+.metric label{color:var(--muted);font-size:9px;letter-spacing:.7px}
+.metric strong{display:block;font-size:20px;margin:8px 0 3px;font-weight:650}
+.metric small{color:var(--muted);font-size:9px}
+.cyan{color:var(--cyan)}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}.blue{color:var(--blue)}
+.cols-2{grid-template-columns:minmax(0,1.45fr) minmax(260px,.85fr)}
+.cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.panel{padding:12px;margin-bottom:9px}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px}
+.panel-head h2{font-size:10px;letter-spacing:1px;margin:0;color:#cbd8e6}
+.panel-head small{font-size:9px;color:var(--muted)}
+.tag{font-size:8px;color:var(--muted);border:1px solid var(--line);padding:4px 6px}
+.notice{border:1px solid #29495a;background:#0d1b27;color:#a9c3d3;padding:9px 11px;margin-bottom:9px;font-size:10px;line-height:1.5}
+.notice b{color:var(--cyan)}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}
+th{text-align:left;color:#71849b;font-size:8px;letter-spacing:.8px;padding:9px 8px;border-bottom:1px solid var(--line)}
+td{padding:9px 8px;border-bottom:1px solid #1a2735;color:#c7d3df;font-size:10px}
+tbody tr:hover{background:#132131}
+.empty{text-align:center;color:var(--muted);padding:22px;font-size:10px}
+.pill{display:inline-block;padding:3px 6px;font-size:8px;border:1px solid var(--line)}
+.pill.low,.pill.ok{color:var(--green);background:#102a25}
+.pill.medium,.pill.pending{color:var(--yellow);background:#302719}
+.pill.high,.pill.bad{color:var(--red);background:#321c25}
+.pill.unknown{color:#9baabd;background:#202b38}
+.bars{display:grid;gap:12px}
+.bar-row{display:grid;grid-template-columns:65px 1fr 35px;gap:8px;align-items:center;color:var(--muted);font-size:9px}
+.track{height:7px;background:#1b2938}
+.fill{height:100%;background:var(--cyan);width:0}
+.fill.low{background:var(--green)}.fill.medium{background:var(--yellow)}.fill.high{background:var(--red)}
+.chart{width:100%;height:220px;display:block;background:linear-gradient(180deg,#0c1722,#0a111a);border:1px solid #1a2a3a}
+.chart-note{font-size:9px;color:var(--muted);margin-top:7px}
+.two-stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.statbox{background:#101c29;border:1px solid var(--line);padding:10px}
+.statbox span{display:block;color:var(--muted);font-size:9px}
+.statbox b{display:block;font-size:16px;margin-top:7px}
+.list{display:grid}
+.list-item{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #1c2a38;font-size:10px}
+.list-item:last-child{border:0}
+.list-item span:first-child{color:var(--muted)}
+.corridor{border:1px solid var(--line);background:#0b1520;padding:10px;margin-bottom:7px}
+.corridor-top{display:flex;justify-content:space-between;gap:10px}
+.corridor strong{font-size:11px}
+.corridor small{color:var(--muted);font-size:9px}
+.corridor-count{color:var(--cyan)}
+.key-input{width:min(350px,100%);padding:9px;background:#080e16;color:#fff;border:1px solid #304258}
+.actions{display:flex;gap:7px;flex-wrap:wrap}
+.form-row{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.form-row input{padding:8px;background:#080e16;color:#fff;border:1px solid #304258}
+.footer{border-top:1px solid var(--line);padding:10px 2px;color:#64778c;font-size:8px;display:flex;justify-content:space-between;gap:10px}
+@media(max-width:1050px){.metrics{grid-template-columns:repeat(3,1fr)}.cols-3{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.app{grid-template-columns:1fr}.sidebar{padding:7px;gap:5px}.brand{padding:4px}.nav-label,.sidebar-foot{display:none}.nav{display:flex;overflow:auto}.nav button{white-space:nowrap;padding:8px}.workspace{padding:8px}.metrics{grid-template-columns:repeat(2,1fr)}.cols-2,.cols-3{grid-template-columns:1fr}.topbar{padding:0 9px}.terminal-label{font-size:8px}}
 </style>
 </head>
 <body>
-<header>
- <div><div class="brand"><span>TRUST</span>NG</div><div class="sub">FINANCIAL INTELLIGENCE</div></div>
- <div class="sub">TRANSACTION RISK TERMINAL</div>
- <div class="right"><span class="live" id="liveStatus">CONNECTING</span><span id="clock" class="muted">--:--:--</span><a href="/dashboard">Dashboard ↗</a></div>
-</header>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark">T</div><div><strong>TRUSTNG</strong><small>FINANCIAL INTELLIGENCE</small></div></div>
+  <div>
+    <div class="nav-label">TERMINAL WORKSPACES</div>
+    <nav class="nav">
+      <button class="active" data-page="market"><span class="nav-icon">▥</span>Market</button>
+      <button data-page="risk"><span class="nav-icon">⌁</span>Risk intelligence</button>
+      <button data-page="transactions"><span class="nav-icon">▤</span>Transactions</button>
+      <button data-page="execution"><span class="nav-icon">⇄</span>Execution monitor</button>
+      <button data-page="system"><span class="nav-icon">⌘</span>System operations</button>
+    </nav>
+  </div>
+  <div class="sidebar-foot"><b>TRUSTNG CONTROL BOUNDARY</b><br>Risk intelligence and monitoring only. No payment authorization or movement of funds.</div>
+</aside>
+
 <main>
-<div class="layout">
- <nav class="sidebar">
-  <a class="nav" href="/dashboard">⌂ Dashboard</a>
-  <a class="nav active" href="/terminal">▥ Trading Terminal</a>
-  <a class="nav" href="#transactions">⇄ Transactions</a>
-  <a class="nav" href="#activity">⬡ Risk & Activity</a>
-  <a class="nav" href="#markets">⌁ Markets</a>
-  <a class="nav" href="#system">⚙ System Health</a>
-  <div style="margin-top:28px" class="note">TRUSTNG MONITORING<br>Human review remains in control. This screen is observational.</div>
- </nav>
+<header class="topbar">
+  <div class="top-left"><span class="terminal-label">TRUSTNG TERMINAL</span><span class="tag" id="clock">LOCAL TIME</span></div>
+  <div class="top-right"><span class="live-indicator"><i class="dot" id="service-dot"></i><span id="service-label">CONNECTING</span></span><button id="refresh">REFRESH DATA</button></div>
+</header>
 
- <section class="content">
-  <div class="metrics">
-   <div class="metric"><div class="label">API status</div><strong id="apiStatus">Checking</strong><span id="apiHint" class="muted">Health endpoint</span></div>
-   <div class="metric"><div class="label">Database</div><strong id="dbStatus">Checking</strong><span class="muted">Reported by backend</span></div>
-   <div class="metric"><div class="label">Transaction feed</div><strong id="txCount">—</strong><span class="muted">Events loaded in this view</span></div>
-   <div class="metric"><div class="label">Risk signals</div><strong id="riskCount">—</strong><span class="muted">From connected data only</span></div>
-   <div class="metric"><div class="label">Indicative USD/NGN</div><strong id="ngn">—</strong><span id="rateStamp" class="muted">Waiting for feed</span></div>
+<div class="workspace">
+<div class="tickerbar">
+  <div class="ticker"><span>TRUSTNG API</span><b id="ticker-api" class="yellow">CHECKING</b><em>service</em></div>
+  <div class="ticker"><span>DATABASE</span><b id="ticker-db" class="yellow">CHECKING</b><em>connection</em></div>
+  <div class="ticker"><span>PROCESSED RECORDS</span><b id="ticker-records">—</b><em>loaded</em></div>
+  <div class="ticker"><span>RISK SIGNALS</span><b id="ticker-signals">—</b><em>signal count</em></div>
+  <div class="ticker"><span>DATA REFRESH</span><b id="ticker-time">—</b><em>local</em></div>
+</div>
+
+<div class="notice"><b>OPERATIONAL NOTICE</b> &nbsp; Market prices and external financial feeds are not connected in this build. No synthetic prices, candles, volumes or transaction activity are displayed. TrustNG risk assessments remain advisory-only.</div>
+
+<!-- MARKET WORKSPACE -->
+<section id="page-market" class="workspace-page active">
+  <div class="page-head"><div><div class="eyebrow">WORKSPACE 01 / MARKET INTELLIGENCE</div><h1>Market Overview</h1><p>Market-data workspace reserved for verified external feeds and currency intelligence.</p></div><span class="tag">EXTERNAL FEED NOT CONNECTED</span></div>
+  <div class="grid metrics">
+    <div class="metric"><label>FX DATA PROVIDER</label><strong class="yellow">OFFLINE</strong><small>No provider configured</small></div>
+    <div class="metric"><label>LIVE CURRENCY PAIRS</label><strong>—</strong><small>Awaiting verified feed</small></div>
+    <div class="metric"><label>MARKET VOLUME</label><strong>—</strong><small>No market volume source</small></div>
+    <div class="metric"><label>WATCHLIST</label><strong>—</strong><small>No instruments configured</small></div>
+    <div class="metric"><label>MARKET STATUS</label><strong class="yellow">UNAVAILABLE</strong><small>Not simulated</small></div>
+  </div>
+  <div class="grid cols-2">
+    <div class="panel">
+      <div class="panel-head"><h2>MARKET CHART / CANDLESTICK VIEW</h2><span class="tag">NO VERIFIED PRICE FEED</span></div>
+      <div class="empty">Candlestick chart will render when a real market-data provider is connected. Transaction records will not be substituted for market prices.</div>
+      <div class="chart-note">Chart modes: Candles · Line · Volume · Indicators · Timeframes</div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h2>CURRENCY WATCHLIST</h2><span class="tag">LIVE DATA REQUIRED</span></div>
+      <table><thead><tr><th>PAIR</th><th>BID</th><th>ASK</th><th>CHANGE</th></tr></thead><tbody><tr><td colspan="4" class="empty">No verified currency feed connected.</td></tr></tbody></table>
+    </div>
+  </div>
+  <div class="grid cols-3">
+    <div class="panel"><div class="panel-head"><h2>AFRICAN FX INTELLIGENCE</h2></div><div class="empty">Awaiting verified exchange-rate source.</div></div>
+    <div class="panel"><div class="panel-head"><h2>MARKET NEWS</h2></div><div class="empty">Awaiting configured news provider.</div></div>
+    <div class="panel"><div class="panel-head"><h2>TRADE CORRIDOR CONTEXT</h2></div><div class="empty">Historical TrustNG corridor data appears in Risk Intelligence.</div></div>
+  </div>
+</section>
+
+<!-- RISK WORKSPACE -->
+<section id="page-risk" class="workspace-page">
+  <div class="page-head"><div><div class="eyebrow">WORKSPACE 02 / TRUSTNG CORE</div><h1>Transaction Risk Intelligence</h1><p>Stored risk assessments, classifications and signals from TrustNG.</p></div><span class="tag">DATABASE RECORDS</span></div>
+  <div class="grid metrics">
+    <div class="metric"><label>PROCESSED ASSESSMENTS</label><strong id="risk-total">—</strong><small>Loaded records</small></div>
+    <div class="metric"><label>HIGH RISK</label><strong id="risk-high" class="red">—</strong><small>Stored classifications</small></div>
+    <div class="metric"><label>MEDIUM RISK</label><strong id="risk-medium" class="yellow">—</strong><small>Stored classifications</small></div>
+    <div class="metric"><label>LOW RISK</label><strong id="risk-low" class="green">—</strong><small>Stored classifications</small></div>
+    <div class="metric"><label>RISK SIGNALS</label><strong id="risk-signals">—</strong><small>Signal count returned</small></div>
+  </div>
+  <div class="grid cols-2">
+    <div class="panel"><div class="panel-head"><h2>RISK CLASSIFICATION DISTRIBUTION</h2><span class="tag">LOADED RECORDS</span></div><div class="bars" id="risk-bars"><div class="empty">Waiting for authenticated risk records.</div></div></div>
+    <div class="panel"><div class="panel-head"><h2>RISK ENGINE CONTROL BOUNDARIES</h2></div>
+      <div class="list">
+        <div class="list-item"><span>Risk assessment</span><b class="cyan">Advisory only</b></div>
+        <div class="list-item"><span>Payment authorization</span><b>Not performed</b></div>
+        <div class="list-item"><span>Funds movement</span><b>Not performed</b></div>
+        <div class="list-item"><span>Fraud review</span><b>Human oversight</b></div>
+        <div class="list-item"><span>AI confidence</span><b>Not calibrated</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="grid cols-2">
+    <div class="panel"><div class="panel-head"><h2>AFRICAN CROSS-BORDER CORRIDORS</h2><span class="tag">HISTORICAL AGGREGATES</span></div><div id="risk-corridors"><div class="empty">No corridor data loaded.</div></div></div>
+    <div class="panel"><div class="panel-head"><h2>CORRIDOR RISK COMPOSITION</h2></div><div class="two-stat"><div class="statbox"><span>High-risk records</span><b class="red" id="corr-high">—</b></div><div class="statbox"><span>Unknown records</span><b class="yellow" id="corr-unknown">—</b></div><div class="statbox"><span>Corridors returned</span><b id="corr-count">—</b></div><div class="statbox"><span>Processed records</span><b id="corr-records">—</b></div></div></div>
   </div>
 
-  <div class="upper">
-   <section class="panel">
-    <div class="sidehead">
-     <div><h2>Transaction Activity <span class="muted">(Candlestick View)</span></h2><div class="note">Transaction value aggregated by time bucket; not a market-price chart.</div></div>
-     <div class="toolbar"><button class="selected" disabled>1H</button><button disabled>4H</button><button disabled>1D</button></div>
+  <div class="panel">
+    <div class="panel-head"><h2>FRAUD INVESTIGATION QUEUE</h2><span class="tag">GET /fraud-cases</span></div>
+    <div class="two-stat">
+      <div class="statbox"><span>Total cases</span><b id="fraud-total">—</b></div>
+      <div class="statbox"><span>Open cases</span><b id="fraud-open">—</b></div>
+      <div class="statbox"><span>Under review</span><b id="fraud-review">—</b></div>
+      <div class="statbox"><span>High severity</span><b class="red" id="fraud-high">—</b></div>
     </div>
-    <div id="chartEmpty" style="min-height:260px;display:grid;place-items:center;text-align:center;padding:22px;color:var(--muted)">
-     <div><strong style="color:var(--text)">Waiting for recorded transaction history</strong><p>No fabricated candles are displayed. Connect a real transaction-history/event source to enable this chart.</p></div>
-    </div>
-    <canvas id="candleChart" class="chart" hidden></canvas>
-    <div id="chartNote" class="chartnote">Data source: not connected yet.</div>
-   </section>
-
-   <section class="panel" id="markets">
-    <div class="sidehead"><h2>Market Watch · FX Rates</h2><span class="muted">Indicative</span></div>
-    <div class="marketrow"><span>USD / NGN</span><strong id="mNgn">—</strong></div>
-    <div class="marketrow"><span>USD / ZAR</span><strong id="zar">—</strong></div>
-    <div class="marketrow"><span>USD / EUR</span><strong id="eur">—</strong></div>
-    <div class="marketrow"><span>USD / GBP</span><strong id="gbp">—</strong></div>
-    <p id="rateError" class="note">Loading provider rates…</p>
-    <p class="note">Indicative reference rates, not executable trading prices. <a href="https://www.exchangerate-api.com/docs/free" target="_blank" rel="noreferrer">Source and terms ↗</a></p>
-   </section>
+    <div class="table-wrap"><table><thead><tr><th>CASE</th><th>CREATED</th><th>STATUS</th><th>SEVERITY</th><th>DECISION</th><th>RISK</th></tr></thead><tbody id="fraud-table"><tr><td colspan="6" class="empty">Waiting for authenticated fraud-case data.</td></tr></tbody></table></div>
+    <div class="chart-note" id="fraud-status">Fraud-case feed not loaded.</div>
   </div>
+</section>
 
-  <section class="panel" id="transactions">
-   <div class="sidehead"><h2>Live Transaction Tape</h2><span id="txFeedStatus" class="muted">No event feed connected</span></div>
-   <div class="tablewrap"><table><thead><tr><th>TIME</th><th>TRANSACTION</th><th>AMOUNT</th><th>ASSET</th><th>RISK</th><th>STATUS</th></tr></thead>
-   <tbody id="txRows"><tr><td colspan="6" class="muted">The live transaction history endpoint has not been connected. This does not mean there are no transactions.</td></tr></tbody></table></div>
-  </section>
+<!-- TRANSACTION WORKSPACE -->
+<section id="page-transactions" class="workspace-page">
+  <div class="page-head"><div><div class="eyebrow">WORKSPACE 03 / ACTIVITY INTELLIGENCE</div><h1>Transaction Monitor</h1><p>Read-only feed of processed TrustNG transaction assessments.</p></div><span class="tag">REDACTED FEED</span></div>
+  <div class="grid metrics">
+    <div class="metric"><label>RECORDS LOADED</label><strong id="tx-count">—</strong><small>Latest returned records</small></div>
+    <div class="metric"><label>HIGH RISK</label><strong class="red" id="tx-high">—</strong><small>Stored risk level</small></div>
+    <div class="metric"><label>REVIEW DECISIONS</label><strong id="tx-review">—</strong><small>Decision classification</small></div>
+    <div class="metric"><label>BLOCK DECISIONS</label><strong id="tx-block">—</strong><small>Decision classification</small></div>
+    <div class="metric"><label>RISK SIGNALS</label><strong id="tx-signals">—</strong><small>Signals counted in feed</small></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h2>PROCESSED TRANSACTION TAPE</h2><span class="tag">GET /v1/terminal/transactions</span></div>
+    <div class="table-wrap"><table><thead><tr><th>REFERENCE</th><th>RECORDED AT</th><th>STATUS</th><th>DECISION</th><th>RISK LEVEL</th><th>SIGNAL COUNT</th></tr></thead><tbody id="transaction-table"><tr><td colspan="6" class="empty">Awaiting authenticated transaction data.</td></tr></tbody></table></div>
+  </div>
+  <div class="panel"><div class="panel-head"><h2>TRANSACTION ACTIVITY NOTES</h2></div><div class="empty">The current read-only API returns processed-record summaries. It does not yet provide a live event stream, detailed signal descriptions or a full investigation timeline.</div></div>
+</section>
 
-  <section class="panel" id="activity">
-   <div class="sidehead"><h2>System Activity</h2><span class="muted">Observed events</span></div>
-   <div id="activityFeed" class="feed"><div class="event"><strong>Terminal started</strong><small>Waiting for TrustNG health response.</small></div></div>
-  </section>
- </section>
+<!-- EXECUTION WORKSPACE -->
+<section id="page-execution" class="workspace-page">
+  <div class="page-head"><div><div class="eyebrow">WORKSPACE 04 / OPERATIONAL CONTROL</div><h1>Execution & Reconciliation Monitor</h1><p>Visibility into sandbox and reconciliation operations.</p></div><span class="tag">NO LIVE PAYMENT EXECUTION</span></div>
+  <div class="notice"><b>SAFETY BOUNDARY</b> &nbsp; TrustNG does not move funds. Sandbox outcomes are simulations, and a pending or uncertain result is not proof of settlement.</div>
+  <div class="grid metrics">
+    <div class="metric"><label>EXECUTION PROVIDER</label><strong class="yellow">SANDBOX</strong><small>No live payment rail</small></div>
+    <div class="metric"><label>PAYMENT AUTHORIZATION</label><strong>NO</strong><small>Not performed by TrustNG</small></div>
+    <div class="metric"><label>FUNDS MOVED</label><strong>NO</strong><small>Not performed by TrustNG</small></div>
+    <div class="metric"><label>RECONCILIATION</label><strong class="yellow">—</strong><small>Feed not connected here</small></div>
+    <div class="metric"><label>EXECUTION EVENTS</label><strong>—</strong><small>Operational event feed required</small></div>
+  </div>
+  <div class="grid cols-2">
+    <div class="panel"><div class="panel-head"><h2>EXECUTION LIFECYCLE</h2></div>
+      <div class="list">
+        <div class="list-item"><span>Risk assessment</span><b class="cyan">Separate stage</b></div>
+        <div class="list-item"><span>Authorization</span><b>External responsibility</b></div>
+        <div class="list-item"><span>Sandbox simulation</span><b class="yellow">Simulated only</b></div>
+        <div class="list-item"><span>Uncertain outcome</span><b class="yellow">Reconciliation required</b></div>
+        <div class="list-item"><span>Blind retry</span><b class="red">Not permitted</b></div>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-head"><h2>RECONCILIATION VISIBILITY</h2><span class="tag">GET /v1/reconciliation/pending</span></div>
+      <div class="two-stat">
+        <div class="statbox"><span>Pending candidates</span><b id="recon-count">—</b></div>
+        <div class="statbox"><span>Oldest candidate</span><b id="recon-oldest">—</b></div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>TRANSACTION</th><th>EXECUTION STATUS</th><th>CLAIMED AT</th><th>TRANSACTION STATUS</th><th>REQUIRED ACTION</th></tr></thead><tbody id="recon-table"><tr><td colspan="5" class="empty">Waiting for authenticated reconciliation data.</td></tr></tbody></table></div>
+      <div class="chart-note" id="recon-status">Pending records require provider-side status verification. No automatic retry or resolution.</div>
+    </div></div>
+  </div>
+</section>
 
- <aside class="rightbar">
-  <section class="panel">
-   <div class="sidehead"><h2>Live System Events</h2><span class="live">MONITOR</span></div>
-   <div id="eventFeed" class="feed"><div class="event"><strong>Awaiting backend</strong><small>Events appear here when connected.</small></div></div>
-   <p class="note">Only actual observed events will be described as live.</p>
-  </section>
-  <section class="panel">
-   <h2>Connect Protected Dashboard Data</h2>
-   <p class="note">Optional. Your API key stays in this page's memory and is not saved.</p>
-   <div class="keyrow"><input id="apiKey" type="password" autocomplete="off" placeholder="Developer API key"><button id="connectBtn">Connect</button><button id="disconnectBtn" type="button">Clear</button></div>
-   <p id="connectStatus" class="note">Not connected</p>
-   <pre id="summaryData" class="note" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
-  </section>
-  <section class="panel" id="system">
-   <h2>Platform Health</h2>
-   <div class="healthline"><span>API</span><strong id="healthApi" class="gold">Checking</strong></div>
-   <div class="healthline"><span>Database</span><strong id="healthDb" class="gold">Checking</strong></div>
-   <div class="healthline"><span>Market feed</span><strong id="healthFx" class="gold">Checking</strong></div>
-   <div class="healthline"><span>Transaction stream</span><strong class="gold">Not connected</strong></div>
-   <p class="note">The terminal does not approve, release or execute transactions.</p>
-  </section>
- </aside>
+<!-- SYSTEM WORKSPACE -->
+<section id="page-system" class="workspace-page">
+  <div class="page-head"><div><div class="eyebrow">WORKSPACE 05 / PLATFORM OPERATIONS</div><h1>System Operations</h1><p>API, database and platform diagnostics.</p></div><span class="tag">LIVE HEALTH CHECK</span></div>
+  <div class="grid metrics">
+    <div class="metric"><label>API SERVICE</label><strong id="sys-api">—</strong><small id="sys-version">Version unknown</small></div>
+    <div class="metric"><label>DATABASE</label><strong id="sys-db">—</strong><small>Health endpoint</small></div>
+    <div class="metric"><label>TRANSACTION FEED</label><strong id="sys-feed">—</strong><small>Protected endpoint</small></div>
+    <div class="metric"><label>CORRIDOR FEED</label><strong id="sys-corr">—</strong><small>Protected endpoint</small></div>
+    <div class="metric"><label>LAST REFRESH</label><strong id="sys-refresh">—</strong><small>Browser local time</small></div>
+  </div>
+  <div class="grid cols-2">
+    <div class="panel"><div class="panel-head"><h2>SERVICE DIAGNOSTICS</h2><span class="tag">/v1/health</span></div><div class="list">
+      <div class="list-item"><span>Service name</span><b id="health-name">—</b></div>
+      <div class="list-item"><span>Status</span><b id="health-status">—</b></div>
+      <div class="list-item"><span>Version</span><b id="health-version">—</b></div>
+      <div class="list-item"><span>Database</span><b id="health-db">—</b></div>
+    </div></div>
+    <div class="panel"><div class="panel-head"><h2>DEVELOPER API ACCESS</h2><span class="tag">BROWSER SESSION</span></div>
+      <p class="chart-note">Enter your TrustNG API key to load protected transaction and corridor information. The key is kept in session storage for this browser session.</p>
+      <div class="form-row"><input class="key-input" id="api-key" type="password" placeholder="Developer API key" autocomplete="off"><button class="btn" id="save-key">SAVE KEY</button><button class="btn" id="clear-key">CLEAR</button></div>
+      <div class="chart-note" id="key-status">No API key entered.</div>
+    </div>
+  </div>
+  <div class="panel"><div class="panel-head"><h2>AUDIT LOG INTEGRITY</h2><span class="tag">GET /audit/integrity</span></div>
+    <div class="two-stat">
+      <div class="statbox"><span>Integrity status</span><b id="audit-status">—</b></div>
+      <div class="statbox"><span>Total events</span><b id="audit-total">—</b></div>
+      <div class="statbox"><span>Valid events</span><b id="audit-valid">—</b></div>
+      <div class="statbox"><span>Invalid events</span><b class="red" id="audit-invalid">—</b></div>
+    </div>
+    <div class="chart-note" id="audit-note">Audit integrity has not been checked.</div>
+  </div>
+  <div class="panel"><div class="panel-head"><h2>PLATFORM EVENT STATUS</h2><span class="tag">CURRENTLY EXPOSED ENDPOINTS</span></div><div class="list">
+    <div class="list-item"><span>Public health</span><b>GET /v1/health</b></div>
+    <div class="list-item"><span>Processed transactions</span><b>GET /v1/terminal/transactions</b></div>
+    <div class="list-item"><span>Corridor aggregates</span><b>GET /v1/terminal/corridors</b></div>
+    <div class="list-item"><span>Live WebSocket event stream</span><b class="yellow">Not connected</b></div>
+    <div class="list-item"><span>Market data provider</span><b class="yellow">Not connected</b></div>
+  </div></div>
+</section>
+
+<div class="footer"><span>TRUSTNG FINANCIAL INTELLIGENCE TERMINAL</span><span>ADVISORY ONLY · READ-ONLY MONITORING · NO FUNDS MOVEMENT</span></div>
 </div>
 </main>
-<footer>TrustNG Terminal · Backend health · Indicative FX · Transaction monitoring · Market data is not financial advice.</footer>
+</div>
+
 <script>
-const $ = id => document.getElementById(id);
-const seenHealth = new Set();
-function logEvent(title, detail, target="activityFeed") {
- const node=document.createElement("div");node.className="event";
- const strong=document.createElement("strong");strong.textContent=title;
- const small=document.createElement("small");small.textContent=new Date().toLocaleTimeString()+" · "+detail;
- node.append(strong,small);$(target).prepend(node);
- while($(target).children.length>30)$(target).lastElementChild.remove();
+(()=>{
+"use strict";
+const $=id=>document.getElementById(id);
+const state={transactions:[],corridors:[],fraudCases:[],reconciliation:[],feedOK:false,corrOK:false,fraudOK:false,reconOK:false,health:null};
+let apiKey="";
+try{apiKey=sessionStorage.getItem("trustng_terminal_key")||""}catch(e){}
+const pages=["market","risk","transactions","execution","system"];
+function esc(v){return String(v??"—").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function cls(v){v=String(v||"unknown").toLowerCase();return ["low","medium","high"].includes(v)?v:"unknown"}
+function pill(v){return `<span class="pill ${cls(v)}">${esc(v||"UNKNOWN")}</span>`}
+function time(v){if(!v)return"—";const d=new Date(v);return isNaN(d)?"—":esc(d.toLocaleString())}
+function set(id,v){if($(id))$(id).textContent=v}
+function navigate(page){
+ if(!pages.includes(page))return;
+ document.querySelectorAll(".workspace-page").forEach(x=>x.classList.toggle("active",x.id==="page-"+page));
+ document.querySelectorAll(".nav button").forEach(x=>x.classList.toggle("active",x.dataset.page===page));
 }
-function setStatus(id,value,ok) {
- $(id).textContent=value;
- $(id).style.color=ok?"var(--green)":"var(--red)";
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>navigate(b.dataset.page)));
+async function get(path){
+ const h={Accept:"application/json"};
+ if(apiKey)h["X-API-Key"]=apiKey;
+ const r=await fetch(path,{headers:h,cache:"no-store"});
+ if(!r.ok)throw Error("HTTP "+r.status);
+ return r.json();
 }
-async function checkHealth() {
- try {
-  const r=await fetch("/v1/health",{cache:"no-store"});
-  if(!r.ok)throw new Error("HTTP "+r.status);
-  const d=await r.json();
-  setStatus("apiStatus",d.status||"Responding",true);
-  setStatus("dbStatus",d.database||"Not reported",String(d.database||"").toLowerCase()==="connected");
-  setStatus("healthApi",d.status||"Responding",true);
-  setStatus("healthDb",d.database||"Not reported",String(d.database||"").toLowerCase()==="connected");
-  $("apiHint").textContent="Last checked "+new Date().toLocaleTimeString();
-  $("liveStatus").textContent="BACKEND REACHABLE";
-  $("liveStatus").style.color="var(--green)";
-  if(!seenHealth.has("ok")){logEvent("TrustNG backend reachable","Health endpoint responded","eventFeed");seenHealth.add("ok");}
- } catch(e) {
-  setStatus("apiStatus","Unavailable",false);setStatus("dbStatus","Unknown",false);
-  setStatus("healthApi","Unavailable",false);setStatus("healthDb","Unknown",false);
-  $("liveStatus").textContent="CONNECTION ISSUE";$("liveStatus").style.color="var(--red)";
-  if(!seenHealth.has("error")){logEvent("Backend health check failed",e.message,"eventFeed");seenHealth.add("error");}
- }
+function counts(){
+ const c={low:0,medium:0,high:0,unknown:0},dec={review:0,block:0},signals=0;
+ state.transactions.forEach(x=>{
+  c[cls(x.risk_level)]++;
+  const d=String(x.decision||"").toLowerCase();
+  if(d.includes("review"))dec.review++;
+  if(d.includes("block"))dec.block++;
+  signals+=Number(x.risk_signal_count)||0;
+ });
+ return {c,dec,signals};
 }
-async function loadRates() {
- try {
-  const r=await fetch("https://open.er-api.com/v6/latest/USD",{cache:"no-store"});
-  if(!r.ok)throw new Error("Provider HTTP "+r.status);
-  const d=await r.json();if(d.result!=="success"||!d.rates)throw new Error("Rate data unavailable");
-  const fmt=v=>Number.isFinite(v)?v.toLocaleString(undefined,{maximumFractionDigits:4}):"—";
-  $("ngn").textContent=fmt(d.rates.NGN);$("mNgn").textContent=fmt(d.rates.NGN);
-  $("zar").textContent=fmt(d.rates.ZAR);$("eur").textContent=fmt(d.rates.EUR);$("gbp").textContent=fmt(d.rates.GBP);
-  $("rateStamp").textContent="Provider update received";
-  $("rateError").textContent="Last provider update: "+(d.time_last_update_utc||"timestamp unavailable");
-  setStatus("healthFx","Connected",true);
- } catch(e) {
-  $("rateError").textContent="Rate feed unavailable: "+e.message;
-  setStatus("healthFx","Unavailable",false);
- }
+function renderTransactions(){
+ const items=state.transactions,{c,dec,signals}=counts();
+ const html=items.length?items.map(x=>`<tr><td>${esc(x.transaction_ref)}</td><td>${time(x.stored_at)}</td><td>${esc(x.status)}</td><td>${esc(x.decision)}</td><td>${pill(x.risk_level)}</td><td>${Number(x.risk_signal_count)||0}</td></tr>`).join(""):'<tr><td colspan="6" class="empty">No processed records returned.</td></tr>';
+ $("transaction-table").innerHTML=html;
+ set("risk-total",state.feedOK?items.length:"—");set("risk-high",state.feedOK?c.high:"—");
+ set("risk-medium",state.feedOK?c.medium:"—");set("risk-low",state.feedOK?c.low:"—");
+ set("risk-signals",state.feedOK?signals:"—");
+ set("tx-count",state.feedOK?items.length:"—");set("tx-high",state.feedOK?c.high:"—");
+ set("tx-review",state.feedOK?dec.review:"—");set("tx-block",state.feedOK?dec.block:"—");
+ set("tx-signals",state.feedOK?signals:"—");
+ set("ticker-records",state.feedOK?items.length:"—");set("ticker-signals",state.feedOK?signals:"—");
+ if(!state.feedOK){$("risk-bars").innerHTML='<div class="empty">Transaction feed unavailable. Enter a valid API key in System Operations.</div>';return}
+ const total=items.length||1;
+ $("risk-bars").innerHTML=[["low","LOW"],["medium","MEDIUM"],["high","HIGH"],["unknown","UNKNOWN"]].map(([k,n])=>`<div class="bar-row"><span>${n}</span><div class="track"><div class="fill ${k}" style="width:${c[k]/total*100}%"></div></div><b>${c[k]}</b></div>`).join("");
 }
-function renderTransactionFeed(data) {
- const body = $("txRows");
- body.replaceChildren();
-
- const items = Array.isArray(data.items) ? data.items : [];
- $("txCount").textContent = String(items.length);
- $("riskCount").textContent = String(
-  items.reduce((total, item) => {
-   const count = Number(item.risk_signal_count);
-   return total + (Number.isFinite(count) && count > 0 ? count : 0);
-  }, 0)
- );
- $("txFeedStatus").textContent = items.length
-  ? "Authenticated · " + items.length + " records"
-  : "Connected · no stored records returned";
-
- if (!items.length) {
-  const row = document.createElement("tr");
-  const cell = document.createElement("td");
-  cell.colSpan = 6;
-  cell.className = "muted";
-  cell.textContent = "This feed request returned no stored records. This does not establish that no transactions exist.";
-  row.appendChild(cell);
-  body.appendChild(row);
-  return;
- }
-
- for (const item of items) {
-  const row = document.createElement("tr");
-  const storedAt = item.stored_at ? new Date(item.stored_at) : null;
-  const timeText = storedAt && !Number.isNaN(storedAt.getTime())
-   ? storedAt.toLocaleString()
-   : "—";
-
-  const values = [
-   timeText,
-   item.transaction_ref || "••••",
-   "—",
-   "—",
-   [item.risk_level || "UNKNOWN",
-    "(" + (Number(item.risk_signal_count) || 0) + " signals)"].join(" "),
-   [item.status || "RECORDED", item.decision || "UNKNOWN"].join(" · ")
-  ];
-
-  for (const value of values) {
-   const cell = document.createElement("td");
-   cell.textContent = String(value);
-   row.appendChild(cell);
-  }
-  body.appendChild(row);
- }
+function renderCorridors(){
+ const a=state.corridors;
+ if(!state.corrOK){$("risk-corridors").innerHTML='<div class="empty">Corridor feed unavailable. Enter a valid API key.</div>';return}
+ let high=0,unknown=0,total=0;
+ a.forEach(x=>{high+=Number(x.risk?.high)||0;unknown+=Number(x.risk?.unknown)||0;total+=Number(x.transaction_count)||0});
+ set("corr-high",high.toLocaleString());set("corr-unknown",unknown.toLocaleString());
+ set("corr-count",a.length);set("corr-records",total.toLocaleString());
+ $("risk-corridors").innerHTML=a.length?a.map(x=>`<div class="corridor"><div class="corridor-top"><strong>${esc(x.origin_country)} → ${esc(x.destination_country)}</strong><b class="corridor-count">${Number(x.transaction_count)||0} records</b></div><small>LOW ${Number(x.risk?.low)||0} · MEDIUM ${Number(x.risk?.medium)||0} · HIGH ${Number(x.risk?.high)||0} · UNKNOWN ${Number(x.risk?.unknown)||0}</small></div>`).join(""):'<div class="empty">No cross-border corridor records found.</div>';
 }
-
-let terminalRequestGeneration = 0;
-
-$("connectBtn").addEventListener("click", async () => {
- const requestGeneration = ++terminalRequestGeneration;
- const key = $("apiKey").value.trim();
- $("apiKey").value = "";
- if (!key) {
-  $("connectStatus").textContent = "Enter your developer API key.";
-  return;
+function renderFraudCases(){
+ const cases=state.fraudCases;
+ if(!state.fraudOK){
+  $("fraud-table").innerHTML='<tr><td colspan="6" class="empty">Fraud-case feed unavailable. Check API key and service.</td></tr>';
+  set("fraud-status","Fraud-case feed unavailable.");return;
  }
-
- const button = $("connectBtn");
- button.disabled = true;
- $("summaryData").textContent = "";
- $("txRows").replaceChildren();
- $("txCount").textContent = "—";
- $("riskCount").textContent = "—";
- $("txFeedStatus").textContent = "Loading protected feed…";
- $("connectStatus").textContent = "Connecting to protected TrustNG endpoints…";
-
- try {
-  const headers = {"X-API-Key": key};
-  const [summaryResponse, feedResponse] = await Promise.all([
-   fetch("/v1/dashboard/summary", {
-    headers,
-    cache: "no-store"
-   }),
-   fetch("/v1/terminal/transactions?limit=50", {
-    headers,
-    cache: "no-store"
-   })
-  ]);
-
-  if (summaryResponse.status === 401 || feedResponse.status === 401) {
-   throw new Error("Authentication failed. Check your developer API key.");
-  }
-  if (!summaryResponse.ok) {
-   throw new Error("Dashboard summary returned HTTP " + summaryResponse.status);
-  }
-  if (!feedResponse.ok) {
-   throw new Error("Transaction feed returned HTTP " + feedResponse.status);
-  }
-
-  const [summaryData, feedData] = await Promise.all([
-   summaryResponse.json(),
-   feedResponse.json()
-  ]);
-
-  if (!feedData || feedData.read_only !== true || !Array.isArray(feedData.items)) {
-   throw new Error("Transaction feed response had an unexpected format.");
-  }
-
-  if (requestGeneration !== terminalRequestGeneration) return;
-
-  $("summaryData").textContent = JSON.stringify(summaryData, null, 2);
-  renderTransactionFeed(feedData);
-  $("connectStatus").textContent = "Connected. Protected summary and transaction feed loaded.";
-  logEvent(
-   "Protected transaction feed loaded",
-   feedData.count + " redacted records received",
-   "eventFeed"
-  );
- } catch (error) {
-  if (requestGeneration !== terminalRequestGeneration) return;
-
-  $("summaryData").textContent = "";
-  $("txRows").replaceChildren();
-  $("txCount").textContent = "—";
-  $("riskCount").textContent = "—";
-  $("txFeedStatus").textContent = "Feed unavailable";
-  $("apiKey").value = "";
-  $("connectStatus").textContent = "Connection failed. Re-enter your API key and try again.";
-  logEvent("Protected feed request failed", error.message, "eventFeed");
- } finally {
-  $("apiKey").value = "";
-  if (requestGeneration === terminalRequestGeneration) {
-   button.disabled = false;
-  }
+ const rows=cases.length?cases.map(x=>{
+  const e=x.evidence||{},t=e.transaction||{};
+  return `<tr><td>${esc(x.case_id)}</td><td>${time(x.created_at)}</td><td>${esc(x.status)}</td><td>${pill(x.severity)}</td><td>${esc(e.decision||"—")}</td><td>${esc(e.risk_level||"—")}</td></tr>`;
+ }).join(""):'<tr><td colspan="6" class="empty">No fraud cases returned.</td></tr>';
+ $("fraud-table").innerHTML=rows;
+ set("fraud-status",cases.length+" case records returned.");
+}
+function renderReconciliation(){
+ const items=state.reconciliation;
+ if(!state.reconOK){
+  $("recon-table").innerHTML='<tr><td colspan="5" class="empty">Reconciliation feed unavailable. Check API key and database.</td></tr>';
+  set("recon-status","Reconciliation feed unavailable.");return;
  }
+ $("recon-table").innerHTML=items.length?items.map(x=>`<tr><td>${esc(x.transaction_id)}</td><td>${esc(x.execution_status)}</td><td>${time(x.claimed_at)}</td><td>${esc(x.transaction_status)}</td><td>${esc(x.resolution)}</td></tr>`).join(""):'<tr><td colspan="5" class="empty">No pending reconciliation candidates returned.</td></tr>';
+ set("recon-count",items.length);
+ const dates=items.map(x=>new Date(x.claimed_at)).filter(x=>!isNaN(x));
+ set("recon-oldest",dates.length?time(new Date(Math.min(...dates)).toISOString()):"—");
+ set("recon-status",items.length?"Provider-side status checks required. No automatic retry.":"No pending candidates returned.");
+}
+async function refresh(){
+ $("refresh").disabled=true;$("refresh").textContent="LOADING";
+ try{
+  const h=await get("/v1/health");state.health=h;
+  const ok=String(h.status).toLowerCase()==="running";
+  set("ticker-api",ok?"ONLINE":"CHECK");set("ticker-db",String(h.database||"unknown").toUpperCase());
+  set("sys-api",ok?"ONLINE":"CHECK");set("sys-version","Version "+(h.version||"unknown"));
+  set("sys-db",String(h.database||"unknown").toUpperCase());
+  set("health-name",h.service||"—");set("health-status",h.status||"—");
+  set("health-version",h.version||"—");set("health-db",h.database||"—");
+  $("service-label").textContent=ok?"API OPERATIONAL":"API CHECK";
+  $("service-dot").style.background=ok?"var(--green)":"var(--yellow)";
+ }catch(e){
+  set("ticker-api","OFFLINE");set("sys-api","OFFLINE");set("service-label","API UNAVAILABLE");
+  $("service-dot").style.background="var(--red)";
+ }
+ try{
+  const d=await get("/v1/terminal/transactions?limit=50");
+  if(!Array.isArray(d.items))throw Error("Invalid transaction response");
+  state.transactions=d.items;state.feedOK=true;set("sys-feed","ONLINE");
+ }catch(e){state.transactions=[];state.feedOK=false;set("sys-feed","UNAVAILABLE");console.warn("Transaction feed:",e.message)}
+ try{
+  const d=await get("/v1/terminal/corridors?limit=100");
+  if(!Array.isArray(d.items))throw Error("Invalid corridor response");
+  state.corridors=d.items;state.corrOK=true;set("sys-corr","ONLINE");
+ }catch(e){state.corridors=[];state.corrOK=false;set("sys-corr","UNAVAILABLE");console.warn("Corridor feed:",e.message)}
+ try{
+  const [list,stats]=await Promise.all([get("/fraud-cases"),get("/fraud-cases/statistics")]);
+  if(!Array.isArray(list.cases))throw Error("Invalid fraud-case response");
+  state.fraudCases=list.cases;state.fraudOK=true;
+  set("fraud-total",stats.total_cases??list.cases.length);
+  set("fraud-open",stats.open_cases??"—");
+  set("fraud-review",stats.under_review_cases??"—");
+  set("fraud-high",stats.high_severity_cases??"—");
+ }catch(e){
+  state.fraudCases=[];state.fraudOK=false;
+  ["fraud-total","fraud-open","fraud-review","fraud-high"].forEach(id=>set(id,"—"));
+  console.warn("Fraud-case feed:",e.message);
+ }
+ try{
+  const d=await get("/v1/reconciliation/pending?older_than_minutes=0&limit=100");
+  if(!Array.isArray(d.items))throw Error("Invalid reconciliation response");
+  state.reconciliation=d.items;state.reconOK=true;
+ }catch(e){state.reconciliation=[];state.reconOK=false;console.warn("Reconciliation feed:",e.message)}
+ try{
+  const a=await get("/audit/integrity");
+  set("audit-status",a.integrity_status||"UNKNOWN");
+  set("audit-total",a.total_events??"—");
+  set("audit-valid",a.valid_events??"—");
+  set("audit-invalid",a.invalid_events??"—");
+  set("audit-note",a.integrity_status==="INTEGRITY_VERIFIED"?"All returned audit events passed integrity verification.":a.integrity_status==="COMPROMISED"?"WARNING: Invalid audit events detected. Investigate immediately.":"Audit status returned an unexpected response.");
+ }catch(e){
+  set("audit-status","UNAVAILABLE");set("audit-total","—");set("audit-valid","—");set("audit-invalid","—");
+  set("audit-note","Audit integrity endpoint unavailable: "+e.message);
+ }
+ renderTransactions();renderCorridors();renderFraudCases();renderReconciliation();
+ const now=new Date().toLocaleTimeString();
+ set("ticker-time",now);set("sys-refresh",now);
+ $("refresh").disabled=false;$("refresh").textContent="REFRESH DATA";
+}
+$("refresh").addEventListener("click",refresh);
+$("save-key").addEventListener("click",()=>{
+ apiKey=$("api-key").value.trim();
+ try{if(apiKey)sessionStorage.setItem("trustng_terminal_key",apiKey);else sessionStorage.removeItem("trustng_terminal_key")}catch(e){}
+ set("key-status",apiKey?"Key saved for this browser session.":"No API key entered.");
+ refresh();
 });
-$("disconnectBtn").addEventListener("click", () => {
- terminalRequestGeneration++;
- $("connectBtn").disabled = false;
- $("apiKey").value = "";
- $("summaryData").textContent = "";
- $("eventFeed").replaceChildren();
- $("txRows").replaceChildren();
- const row = document.createElement("tr");
- const cell = document.createElement("td");
- cell.colSpan = 6;
- cell.className = "muted";
- cell.textContent = "Connect to load protected transaction history.";
- row.appendChild(cell);
- $("txRows").appendChild(row);
- $("txCount").textContent = "—";
- $("riskCount").textContent = "—";
- $("txFeedStatus").textContent = "Not connected";
- $("connectStatus").textContent = "Protected data cleared from this page.";
+$("clear-key").addEventListener("click",()=>{
+ apiKey="";$("api-key").value="";
+ try{sessionStorage.removeItem("trustng_terminal_key")}catch(e){}
+ set("key-status","API key cleared.");refresh();
 });
-function clock(){ $("clock").textContent=new Date().toLocaleTimeString(); }
-clock();setInterval(clock,1000);
-checkHealth();loadRates();
-setInterval(checkHealth,15000);
-setInterval(loadRates,300000);
+if(apiKey){$("api-key").value=apiKey;set("key-status","A session API key is loaded.")}
+function clock(){set("clock",new Date().toLocaleString())}
+clock();setInterval(clock,1000);refresh();setInterval(refresh,60000);
+})();
 </script>
 </body>
 </html>

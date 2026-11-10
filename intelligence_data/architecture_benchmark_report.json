@@ -1,0 +1,64 @@
+{
+  "summary": {
+    "engine": "TrustNG Architecture Benchmarking Engine",
+    "version": "0.1.0",
+    "generated_at": "2026-10-27T15:15:06.780429+00:00",
+    "capability_domains": 12,
+    "recorded_capabilities": 12,
+    "source_observations": 1,
+    "findings": 1,
+    "review_required": true,
+    "automatic_production_changes": false,
+    "payment_authorized": false,
+    "funds_moved": false,
+    "findings_by_domain": {
+      "api_security": 1
+    }
+  },
+  "findings": [
+    {
+      "finding_id": "AB-03711B737D2E",
+      "domain": "api_security",
+      "domain_name": "API security and access control",
+      "source_name": "Saudi Central Bank - Cyber Security Framework",
+      "source_url": "https://rulebook.sama.gov.sa/en/cyber-security-framework-2",
+      "source_observation": "Review TrustNG API-key enforcement, credential rotation, and route-level access controls against relevant official guidance.",
+      "evidence_status": "NEEDS_REVIEW",
+      "trustng_status": "IMPLEMENTED",
+      "trustng_current_state": "API-key protection exists for selected internal endpoints.",
+      "gap": "No gap inferred from status alone; validate the implementation against the documented observation. Known limitations: Confirm route-by-route enforcement and key rotation procedures. Source evidence has not been fully verified; do not treat this comparison as a compliance conclusion.",
+      "proposed_adaptation": "Perform a documented conformance review.",
+      "risk_if_unaddressed": "A claimed implementation may not cover every relevant case.",
+      "validation_plan": [
+        "Confirm the source and the date/version of its requirement.",
+        "Map the requirement to the exact TrustNG component and code path.",
+        "Define acceptance criteria and security failure cases.",
+        "Obtain human review before implementation.",
+        "Validate in a sandbox before considering production adoption."
+      ],
+      "rollback_plan": "Keep the existing behavior as the default; deploy no change until reviewed. If an approved implementation fails validation, revert the isolated change and preserve audit evidence.",
+      "document_title": "Cyber Security Framework",
+      "document_publication_date": "2017-05-24",
+      "document_section": "3.3.5 Identity and Access Management; 3.2.4 Cyber Security Review",
+      "evidence_excerpt": "The Member Organization should restrict access to its information assets in line with their business requirements based on the need-to-have or need-to-know principles.",
+      "evidence_reference": "Official SAMA Rulebook, section 3.3.5. Section 3.2.4 also provides review criteria for critical and internet-facing services. Applicability to TrustNG has not been established.",
+      "evidence_reviewer_notes": "Source passage captured for architecture benchmarking. Compare with TrustNG's implemented API-key access controls. This excerpt does not specify API-key rotation requirements. Evidence remains unverified.",
+      "review_status": "PENDING",
+      "created_at": "2026-10-27T15:15:06.780389+00:00"
+    }
+  ],
+  "source_catalogue": {
+    "name": "research_collector.RESEARCH_SOURCES",
+    "catalogue_entries_available": 25,
+    "observations_submitted": 1,
+    "source_fetching_performed": false,
+    "catalogue_membership_means_evidence_verified": false
+  },
+  "governance": {
+    "human_review_required": true,
+    "automatic_code_changes": false,
+    "automatic_production_deployment": false,
+    "payment_authorized": false,
+    "funds_moved": false
+  }
+}

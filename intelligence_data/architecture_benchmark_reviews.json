@@ -1,0 +1,16 @@
+[
+  {
+    "review_id": "BR-7C8EDC55AA28",
+    "finding_id": "AB-46F8BC37737F",
+    "domain": "api_security",
+    "reviewer": "TrustNG project review",
+    "decision": "PENDING",
+    "notes": "Review pending. API security observation requires independent source and implementation assessment.",
+    "evidence_reference": "intelligence_data/benchmark_observations.json",
+    "reviewed_at": "2026-10-27T14:09:08.920586+00:00",
+    "evidence_verified": false,
+    "compliance_certified": false,
+    "payment_authorized": false,
+    "funds_moved": false
+  }
+]

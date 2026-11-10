@@ -323,3 +323,107 @@ expired, or invalid sessions must not be reused.
 - Do not use sandbox responses as evidence that a real account is trustworthy.
 - Production use requires suitable persistent session storage, rate limiting,
   monitoring, real verification-provider integration, and security review.
+
+
+## Recipient Contact Verification (Email + Assigned Phone)
+
+TrustNG supports a two-channel recipient contact verification workflow.
+A recipient must be registered with an email address and an assigned phone
+number before verification can begin.
+
+This workflow verifies control of the registered email address and assigned
+phone number. It does not establish legal identity, prove bank-account
+ownership, authorize a payment, or move funds.
+
+### Authentication and configuration
+
+All recipient registration and verification endpoints require `X-API-Key`.
+Use the authentication instructions above and keep the key private.
+
+For local sandbox testing, use these settings in your local `.env` file:
+
+    TRUSTNG_ENV=sandbox
+    TRUSTNG_PHONE_DELIVERY_MODE=sandbox
+    TRUSTNG_EMAIL_DELIVERY_MODE=sandbox
+
+When both phone and email delivery modes are set to sandbox, TrustNG returns
+test verification codes in the API response and sends neither real SMS nor
+real email.
+
+If `TRUSTNG_EMAIL_DELIVERY_MODE=smtp` is enabled while phone delivery remains
+in sandbox mode, TrustNG sends the email code through the configured SMTP
+server. This is a real email delivery attempt; only the phone code remains
+available through the sandbox response.
+
+The `.env.example` file contains placeholders for database, API key, Sendozi,
+and SMTP configuration. Copy the placeholders you need into your private
+`.env` file and replace them locally. Never commit credentials.
+
+### Available endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/v1/recipients/register` | Registers an email recipient and assigned phone number. Registration alone does not verify ownership. |
+| POST | `/v1/recipients/verification/start` | Creates separate email and phone verification codes. |
+| POST | `/v1/recipients/verification/confirm` | Confirms both codes and verifies contact ownership. |
+| POST | `/v1/recipients/lookup` | Looks up a registered recipient and its verification status. |
+
+Consult `/docs` or `/openapi.json` on the configured API host for the
+complete request and response schemas.
+
+### Sandbox workflow
+
+Register a synthetic recipient:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/recipients/register" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"email":"demo.recipient@example.test","recipient_id":"demo_user_001","display_name":"Demo Recipient","phone_number":"+2348000000000","source":"SANDBOX"}'
+
+Start verification for the registered email:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/recipients/verification/start" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"email":"demo.recipient@example.test"}'
+
+When both delivery modes are set to sandbox, the response contains both
+generated test codes. If SMTP email delivery is enabled, the response contains
+the phone test code only; the email code is sent through SMTP.
+Use the email code as `email_code` and the phone code as `phone_code`:
+
+    curl -sS -X POST "$TRUSTNG_BASE_URL/v1/recipients/verification/confirm" \
+      -H "X-API-Key: $TRUSTNG_API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"email":"demo.recipient@example.test","email_code":"PASTE_EMAIL_CODE","phone_code":"PASTE_PHONE_CODE"}'
+
+A successful confirmation returns `FULLY_VERIFIED` for contact verification.
+It still returns `identity_verified: false`, `payment_authorized: false`,
+and `funds_moved: false`.
+
+### Verification rules and provider modes
+
+- Email and phone codes are independently generated six-digit codes.
+- The two codes are different and expire after 10 minutes.
+- Each channel allows at most five incorrect attempts. Reaching five
+  incorrect attempts on either channel locks the entire challenge, and even
+  the correct codes are then rejected.
+- A challenge is single-use. Expired or consumed codes cannot be reused.
+- A consumed, expired, or locked challenge can only be replaced after it is
+  at least 60 seconds old. A new verification request must then create a
+  new challenge.
+- The recipient must have an assigned phone number in the registration record.
+- With both delivery modes set to sandbox, neither real SMS nor real email is sent.
+- Sendozi test mode requires a Sendozi test API key. Provider test acceptance
+  is not handset delivery; test requests do not deliver real SMS.
+- Production SMS requires valid live Sendozi credentials and an approved
+  transactional sender.
+- SMTP mode sends real email and requires valid SMTP credentials. When
+  testing Sendozi from the sandbox environment, SMTP may therefore send a
+  real email even though Sendozi test SMS is not delivered.
+- A provider acceptance response means the provider accepted the request;
+  it is not proof that the recipient received the message.
+
+Contact verification is not legal identity verification, bank-account
+verification, payment authorization, or payment execution. TrustNG remains
+risk and verification infrastructure; these endpoints do not move funds.
