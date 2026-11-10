@@ -1,4 +1,5 @@
 from models import Transaction
+import pytest
 import transaction_executor
 from transaction_executor import execute_transaction, EXECUTED_TRANSACTIONS
 
@@ -419,3 +420,103 @@ def test_database_final_result_cannot_be_overwritten(monkeypatch):
 
     with pytest.raises(RuntimeError, match="final result"):
         idempotency.store_transaction(transaction, {"status": "ALLOWED"})
+
+
+def test_legacy_transaction_fingerprint_remains_eight_parts():
+    import idempotency
+
+    transaction = make_transaction("CORRIDOR-TEST-001")
+    fingerprint = idempotency.create_transaction_fingerprint(transaction)
+
+    assert len(fingerprint) == 8
+    assert fingerprint[6] == "NG"
+
+
+def test_corridor_countries_are_included_in_fingerprint():
+    import idempotency
+
+    transaction = make_transaction("CORRIDOR-TEST-002").model_copy(
+        update={
+            "sender_country": "NG",
+            "receiver_country": "GH",
+        }
+    )
+
+    fingerprint = idempotency.create_transaction_fingerprint(transaction)
+
+    assert fingerprint[-2:] == ("NG", "GH")
+    assert len(fingerprint) == 10
+
+
+def test_corridor_country_change_is_transaction_id_reuse(monkeypatch):
+    import idempotency
+
+    reset_idempotency_state(monkeypatch)
+
+    transaction = make_transaction("CORRIDOR-TEST-003").model_copy(
+        update={
+            "sender_country": "NG",
+            "receiver_country": "GH",
+        }
+    )
+
+    changed_transaction = transaction.model_copy(
+        update={"receiver_country": "KE"}
+    )
+
+    assert idempotency.reserve_transaction(transaction) is None
+
+    result = idempotency.reserve_transaction(changed_transaction)
+
+    assert result["status"] == "ID_REUSE"
+
+
+def test_corridor_countries_must_be_supplied_together():
+    import pytest
+
+    with pytest.raises(ValueError, match="supplied together"):
+        Transaction(
+            transaction_id="CORRIDOR-TEST-004",
+            sender="sender_001",
+            receiver="receiver_001",
+            asset="NGN",
+            amount=5000,
+            channel="BANK",
+            country="NG",
+            sender_country="NG",
+        )
+
+
+@pytest.mark.parametrize("invalid_code", ["ZZ", "XX", "123", "N1"])
+def test_transaction_rejects_invalid_iso_corridor_country(invalid_code):
+    import pytest
+
+    with pytest.raises(ValueError, match="ISO 3166-1"):
+        Transaction(
+            transaction_id="ISO-INVALID-001",
+            sender="sender_001",
+            receiver="receiver_001",
+            asset="NGN",
+            amount=5000,
+            channel="BANK",
+            country="NG",
+            sender_country=invalid_code,
+            receiver_country="GH",
+        )
+
+
+def test_transaction_normalizes_valid_iso_corridor_countries():
+    transaction = Transaction(
+        transaction_id="ISO-VALID-001",
+        sender="sender_001",
+        receiver="receiver_001",
+        asset="NGN",
+        amount=5000,
+        channel="BANK",
+        country="NG",
+        sender_country=" ng ",
+        receiver_country=" gh ",
+    )
+
+    assert transaction.sender_country == "NG"
+    assert transaction.receiver_country == "GH"

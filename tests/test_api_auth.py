@@ -657,3 +657,75 @@ def test_terminal_transaction_feed_handles_database_failure(monkeypatch):
         "Transaction history is temporarily unavailable."
     )
     assert "simulated database connection failure" not in response.text
+
+
+def test_terminal_corridors_requires_api_key(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    response = client.get("/v1/terminal/corridors")
+    assert response.status_code == 401
+
+
+def test_terminal_corridors_returns_redacted_aggregates(monkeypatch):
+    import main
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    monkeypatch.setattr(
+        main.database,
+        "get_transaction_corridor_summary",
+        lambda limit: [{
+            "origin_country": "NG",
+            "destination_country": "GH",
+            "transaction_count": 4,
+            "risk": {"low": 1, "medium": 1, "high": 2, "unknown": 0},
+        }],
+    )
+
+    response = client.get(
+        "/v1/terminal/corridors",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["read_only"] is True
+    assert body["payment_authorized"] is False
+    assert body["funds_moved"] is False
+    assert body["count"] == 1
+    assert body["items"][0]["origin_country"] == "NG"
+    assert body["items"][0]["destination_country"] == "GH"
+    assert body["items"][0]["transaction_count"] == 4
+    assert "fingerprint" not in response.text
+    assert "transaction_id" not in response.text
+
+
+def test_terminal_corridors_rejects_excessive_limit(monkeypatch):
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+    response = client.get(
+        "/v1/terminal/corridors?limit=501",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+    assert response.status_code == 400
+
+
+def test_terminal_corridors_handles_database_failure(monkeypatch):
+    import main
+    import psycopg
+
+    monkeypatch.setenv("TRUSTNG_API_KEY", "test-secret-key")
+
+    def fail_query(limit):
+        raise psycopg.OperationalError("simulated database failure")
+
+    monkeypatch.setattr(
+        main.database,
+        "get_transaction_corridor_summary",
+        fail_query,
+    )
+
+    response = client.get(
+        "/v1/terminal/corridors",
+        headers={"X-API-Key": "test-secret-key"},
+    )
+
+    assert response.status_code == 503
+    assert "simulated database failure" not in response.text

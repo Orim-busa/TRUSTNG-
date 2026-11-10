@@ -1,0 +1,16 @@
+{
+  "aliases": [
+    {
+      "legacy_finding_id": "AB-46F8BC37737F",
+      "current_finding_id": "AB-03711B737D2E",
+      "link_status": "PROVISIONAL_NEEDS_HUMAN_CONFIRMATION",
+      "basis": "Same source URL and benchmark domain; legacy review references the observations file. Full historical finding content is unavailable for definitive identity confirmation.",
+      "legacy_review_id": "BR-7C8EDC55AA28",
+      "review_decision": "PENDING",
+      "evidence_verified": false,
+      "compliance_certified": false,
+      "payment_authorized": false,
+      "funds_moved": false
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+{
+  "report": "TrustNG Architecture Benchmark Catalogue Inventory",
+  "generated_at": "2026-10-27T13:58:11.675128+00:00",
+  "benchmark_domains": {
+    "api_security": "API security and access control",
+    "identity_consent": "Identity verification and consent",
+    "transaction_risk": "Transaction risk assessment",
+    "fraud_monitoring": "Fraud monitoring and investigation",
+    "payment_integrity": "Payment integrity and idempotency",
+    "auditability": "Audit trails and evidence integrity",
+    "resilience": "Failure handling and recovery",
+    "ai_governance": "AI governance and explainability",
+    "privacy": "Data minimization and privacy",
+    "cross_border": "Cross-border payment risk",
+    "developer_conformance": "Developer API conformance",
+    "third_party_risk": "Third-party and provider risk"
+  },
+  "source_count": 24,
+  "sources": [
+    {
+      "name": "Saudi Central Bank - Open Banking",
+      "url": "https://openbanking.sama.gov.sa/index-en.html",
+      "jurisdiction": "Saudi Arabia",
+      "region": "international",
+      "topic": "open_banking_and_api_standards",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Saudi Central Bank",
+      "url": "https://www.sama.gov.sa/en-US/Pages/default.aspx",
+      "jurisdiction": "Saudi Arabia",
+      "region": "international",
+      "topic": "banking_payments_cybersecurity",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Central Bank of the UAE - Open Finance Regulation",
+      "url": "https://rulebook.centralbank.ae/en/rulebook/open-finance-regulation",
+      "jurisdiction": "United Arab Emirates",
+      "region": "international",
+      "topic": "open_finance_and_api_security",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Dubai Financial Services Authority",
+      "url": "https://www.dfsa.ae/",
+      "jurisdiction": "United Arab Emirates",
+      "region": "international",
+      "topic": "financial_services_and_fintech",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "European Banking Authority",
+      "url": "https://www.eba.europa.eu/",
+      "jurisdiction": "European Union",
+      "region": "international",
+      "topic": "banking_risk_payments_and_regulation",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "EU Digital Operational Resilience Act",
+      "url": "https://eur-lex.europa.eu/eli/reg/2022/2554/oj",
+      "jurisdiction": "European Union",
+      "region": "international",
+      "topic": "digital_operational_resilience",
+      "source_type": "legislation",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "European Data Protection Board",
+      "url": "https://www.edpb.europa.eu/",
+      "jurisdiction": "European Union",
+      "region": "international",
+      "topic": "privacy_and_data_protection",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "UK Financial Conduct Authority",
+      "url": "https://www.fca.org.uk/firms/innovation/regulatory-sandbox",
+      "jurisdiction": "United Kingdom",
+      "region": "international",
+      "topic": "fintech_testing_and_regulation",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Bank of England",
+      "url": "https://www.bankofengland.co.uk/",
+      "jurisdiction": "United Kingdom",
+      "region": "international",
+      "topic": "financial_stability_and_payments",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "US National Institute of Standards and Technology - AI Risk Management",
+      "url": "https://www.nist.gov/itl/ai-risk-management-framework",
+      "jurisdiction": "United States",
+      "region": "international",
+      "topic": "ai_governance_and_model_risk",
+      "source_type": "standards_body",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "US Financial Crimes Enforcement Network",
+      "url": "https://www.fincen.gov/",
+      "jurisdiction": "United States",
+      "region": "international",
+      "topic": "financial_crime_and_aml",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "US Federal Reserve",
+      "url": "https://www.federalreserve.gov/",
+      "jurisdiction": "United States",
+      "region": "international",
+      "topic": "banking_payments_and_financial_stability",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "People's Bank of China",
+      "url": "https://www.pbc.gov.cn/en/3688006/index.html",
+      "jurisdiction": "China",
+      "region": "international",
+      "topic": "banking_digital_finance_and_payments",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Monetary Authority of Singapore",
+      "url": "https://www.mas.gov.sg/",
+      "jurisdiction": "Singapore",
+      "region": "international",
+      "topic": "fintech_cybersecurity_and_payments",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Reserve Bank of India",
+      "url": "https://www.rbi.org.in/",
+      "jurisdiction": "India",
+      "region": "international",
+      "topic": "payments_banking_and_fraud_risk",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Financial Action Task Force",
+      "url": "https://www.fatf-gafi.org/en/home.html",
+      "jurisdiction": "International",
+      "region": "international",
+      "topic": "aml_cft_and_financial_crime",
+      "source_type": "international_standard_setter",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Financial Stability Board",
+      "url": "https://www.fsb.org/",
+      "jurisdiction": "International",
+      "region": "international",
+      "topic": "financial_stability_and_operational_risk",
+      "source_type": "international_standard_setter",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "BIS Committee on Payments and Market Infrastructures",
+      "url": "https://www.bis.org/cpmi/",
+      "jurisdiction": "International",
+      "region": "international",
+      "topic": "payment_systems_and_cross_border_payments",
+      "source_type": "international_standard_setter",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "PCI Security Standards Council",
+      "url": "https://www.pcisecuritystandards.org/",
+      "jurisdiction": "International",
+      "region": "international",
+      "topic": "payment_card_data_security",
+      "source_type": "industry_standard",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Central Bank of Nigeria",
+      "url": "https://www.cbn.gov.ng/",
+      "jurisdiction": "Nigeria",
+      "region": "africa",
+      "topic": "payments_banking_and_fintech",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Nigeria Data Protection Commission",
+      "url": "https://ndpc.gov.ng/",
+      "jurisdiction": "Nigeria",
+      "region": "africa",
+      "topic": "privacy_and_data_protection",
+      "source_type": "regulatory_authority",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Bank of Ghana",
+      "url": "https://www.bog.gov.gh/",
+      "jurisdiction": "Ghana",
+      "region": "africa",
+      "topic": "payments_fintech_and_banking",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "South African Reserve Bank",
+      "url": "https://www.resbank.co.za/",
+      "jurisdiction": "South Africa",
+      "region": "africa",
+      "topic": "payments_financial_stability_and_banking",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    },
+    {
+      "name": "Central Bank of Kenya",
+      "url": "https://www.centralbank.go.ke/",
+      "jurisdiction": "Kenya",
+      "region": "africa",
+      "topic": "mobile_money_payments_and_fintech",
+      "source_type": "central_bank",
+      "evidence_status": "UNVERIFIED",
+      "review_status": "PENDING"
+    }
+  ],
+  "evidence_verified": false,
+  "limitations": [
+    "Catalogue inventory only; no external source was fetched.",
+    "Catalogue membership does not verify evidence.",
+    "Human review is required before evidence is marked verified."
+  ],
+  "governance": {
+    "automatic_code_changes": false,
+    "automatic_production_deployment": false,
+    "payment_authorized": false,
+    "funds_moved": false
+  }
+}

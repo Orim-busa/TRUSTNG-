@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List, Literal
-
+from country_codes import normalize_corridor_countries
 
 class Transaction(BaseModel):
     transaction_id: str
@@ -11,6 +11,19 @@ class Transaction(BaseModel):
     channel: str
     country: str
     device_id: Optional[str] = None
+    sender_country: Optional[str] = None
+    receiver_country: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_corridor_countries(self):
+        (
+            self.sender_country,
+            self.receiver_country,
+        ) = normalize_corridor_countries(
+            self.sender_country,
+            self.receiver_country,
+        )
+        return self
 
 
 class RiskSignal(BaseModel):

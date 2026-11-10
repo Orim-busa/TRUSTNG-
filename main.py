@@ -1,4 +1,5 @@
 
+import logging
 import os
 import secrets
 from contextlib import asynccontextmanager
@@ -9,6 +10,21 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 import database
+
+
+logger = logging.getLogger(__name__)
+
+
+def _invalidate_failed_recipient_challenge(email):
+    try:
+        database.invalidate_recipient_email_verification(email)
+        return True
+    except Exception:
+        logger.error(
+            "Failed to invalidate recipient verification challenge after delivery failure."
+        )
+        return False
+
 import dashboard_service
 import account_trust_check as account_trust_check
 import research_promotion
@@ -16,12 +32,16 @@ import research_promotion
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
 from models import Transaction, ResearchCandidateReview
 from risk_engine import analyze_transaction
 from policy_engine import evaluate_transaction
 from restriction_engine import create_restriction
 from beneficiary_profiles import get_beneficiary_profile
+import recipient_directory
+import email_delivery
+import sms_delivery
 from adaptive_trust import calculate_trust
 from behavioral_anomaly import analyze_behavioral_anomaly
 from ai_risk_engine import analyze_transaction_with_ai
@@ -69,6 +89,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+app.mount("/assets", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "assets"), name="public_assets")
+app.mount("/dijuang", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "dijuang", html=True), name="dijuang_site")
+app.mount("/trustng", StaticFiles(directory=Path(__file__).resolve().parent / "public_site" / "trustng", html=True), name="trustng_site")
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -587,6 +612,420 @@ def verify_audit_integrity():
 
 
 
+@app.post("/v1/recipients/verification/start")
+def recipient_email_verification_start(
+    request: recipient_directory.RecipientEmailVerificationStartRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Start dual email and assigned-phone ownership verification."""
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+    if not configured_key:
+        raise HTTPException(status_code=503, detail="Developer API is not configured with an API key.")
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(status_code=401, detail="A valid X-API-Key is required.")
+    if not os.environ.get("DATABASE_URL"):
+        raise HTTPException(status_code=503, detail="Email verification requires DATABASE_URL.")
+
+    phone_mode = os.environ.get(
+        "TRUSTNG_PHONE_DELIVERY_MODE", ""
+    ).strip().lower()
+    environment = os.environ.get("TRUSTNG_ENV", "").strip().lower()
+
+    sandbox_phone_enabled = (
+        environment == "sandbox" and phone_mode == "sandbox"
+    )
+    live_sms_enabled = (
+        environment in ("sandbox", "production")
+        and phone_mode == "sendozi"
+    )
+
+    if not sandbox_phone_enabled and not live_sms_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Phone verification delivery is not configured. "
+                "Sandbox OTP exposure is disabled."
+            ),
+        )
+
+    if live_sms_enabled and not email_delivery.smtp_mode_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="SMTP email delivery must be configured for dual verification.",
+        )
+
+    try:
+        result = database.start_recipient_email_verification(request.email)
+
+        if sandbox_phone_enabled:
+            if email_delivery.smtp_mode_enabled():
+                try:
+                    email_delivery.send_verification_email(
+                        result["email"],
+                        result["email_verification_code"],
+                    )
+                except Exception as exc:
+                    challenge_invalidated = (
+                        _invalidate_failed_recipient_challenge(result["email"])
+                    )
+                    raise HTTPException(
+                        status_code=503,
+                        detail=(
+                            "Verification email could not be delivered. "
+                            + (
+                                "The challenge was invalidated; request new codes later."
+                                if challenge_invalidated
+                                else "Challenge invalidation failed. Do not use the codes; they may remain active until expiry."
+                            )
+                        ),
+                    ) from exc
+
+                return {
+                    "email": result["email"],
+                    "expires_in_seconds": result["expires_in_seconds"],
+                    "email_delivery_mode": "SMTP",
+                    "email_sent": True,
+                    "phone_delivery_mode": "SANDBOX_ONLY",
+                    "phone_verification_code": result["phone_verification_code"],
+                    "masked_phone": result["masked_phone"],
+                }
+
+            return {
+                "email": result["email"],
+                "email_verification_code": result["email_verification_code"],
+                "phone_verification_code": result["phone_verification_code"],
+                "expires_in_seconds": result["expires_in_seconds"],
+                "email_delivery_mode": "SANDBOX",
+                "phone_delivery_mode": "SANDBOX_ONLY",
+                "masked_phone": result["masked_phone"],
+            }
+
+        # Provider mode: never return either OTP or the full assigned phone.
+        try:
+            email_delivery.send_verification_email(
+                result["email"],
+                result["email_verification_code"],
+            )
+            sms_result = sms_delivery.send_verification_sms(
+                result["phone_number"],
+                result["phone_verification_code"],
+                result["idempotency_key"],
+            )
+        except Exception as exc:
+            challenge_invalidated = (
+                _invalidate_failed_recipient_challenge(result["email"])
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "A verification code could not be accepted for delivery. "
+                    + (
+                        "The challenge was invalidated; request new codes later."
+                        if challenge_invalidated
+                        else "Challenge invalidation failed. Do not use the codes; they may remain active until expiry."
+                    )
+                ),
+            ) from exc
+
+        return {
+            "email": result["email"],
+            "expires_in_seconds": result["expires_in_seconds"],
+            "email_delivery_mode": "SMTP",
+            "email_sent": True,
+            "phone_delivery_mode": sms_result["mode"],
+            "phone_sms_accepted": sms_result["accepted"],
+            "masked_phone": result["masked_phone"],
+        }
+
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Recipient OTP delivery or security configuration is incomplete.",
+        ) from exc
+    except ValueError as exc:
+        message = str(exc)
+        status = 429 if ("wait" in message.lower() or "attempt" in message.lower()) else 400
+        raise HTTPException(status_code=status, detail=message)
+
+
+@app.post("/v1/recipients/verification/confirm")
+def recipient_email_verification_confirm(
+    request: recipient_directory.RecipientEmailVerificationConfirmRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Confirm both email and assigned-phone ownership codes."""
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+    if not configured_key:
+        raise HTTPException(status_code=503, detail="Developer API is not configured with an API key.")
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(status_code=401, detail="A valid X-API-Key is required.")
+    if not os.environ.get("DATABASE_URL"):
+        raise HTTPException(status_code=503, detail="Email verification requires DATABASE_URL.")
+
+    try:
+        return database.confirm_recipient_email_verification(
+            request.email, request.email_code, request.phone_code
+        )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Recipient OTP security configuration is incomplete.",
+        ) from exc
+    except ValueError as exc:
+        message = str(exc)
+        status = 429 if "attempt" in message.lower() else 400
+        raise HTTPException(status_code=status, detail=message)
+
+
+@app.post("/v1/recipients/register")
+def recipient_email_register(
+    request: recipient_directory.RecipientRegistrationRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Register an email alias; this does not verify ownership."""
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+    if not configured_key:
+        raise HTTPException(status_code=503, detail="Developer API is not configured with an API key.")
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(status_code=401, detail="A valid X-API-Key is required.")
+    if not os.environ.get("DATABASE_URL"):
+        raise HTTPException(status_code=503, detail="Persistent registration requires DATABASE_URL.")
+
+    try:
+        result = database.register_recipient_email(
+            request.email,
+            request.recipient_id,
+            request.display_name,
+            request.phone_number,
+            request.source,
+        )
+    except ValueError as exc:
+        status = 400 if "valid" in str(exc).lower() or "required" in str(exc).lower() or "unsupported" in str(exc).lower() else 409
+        raise HTTPException(status_code=status, detail=str(exc))
+
+    return {
+        **result,
+        "identity_verified": False,
+        "payment_authorized": False,
+        "funds_moved": False,
+    }
+
+
+@app.post("/v1/recipients/lookup")
+def recipient_email_lookup(
+    request: recipient_directory.RecipientLookupRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+
+    if not configured_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Developer API is not configured with an API key.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(
+            status_code=401,
+            detail="A valid X-API-Key is required.",
+        )
+
+    try:
+        result = recipient_directory.lookup_recipient(request.email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if result is None:
+        raise HTTPException(status_code=404, detail="Recipient not found in the sandbox directory.")
+
+    return result
+
+
+@app.post("/v1/transactions/check-by-email")
+def developer_transaction_check_by_email(
+    request: recipient_directory.EmailTransactionRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Resolve a sandbox recipient email and assess transaction risk only."""
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+
+    if not configured_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Developer API is not configured with an API key.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(
+            status_code=401,
+            detail="A valid X-API-Key is required.",
+        )
+
+    try:
+        recipient = recipient_directory.lookup_recipient(request.recipient_email)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if recipient is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Recipient not found in the sandbox directory.",
+        )
+
+    if recipient.get("contact_verification_status") != "FULLY_VERIFIED":
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Recipient email and assigned phone ownership must both "
+                "be verified before this email can be used for recipient "
+                "resolution."
+            ),
+        )
+
+    transaction = Transaction(
+        transaction_id=request.transaction_id,
+        sender=request.sender,
+        receiver=recipient["recipient_id"],
+        asset=request.asset,
+        amount=request.amount,
+        channel=request.channel,
+        country=request.country,
+        device_id=request.device_id,
+        sender_country=request.sender_country,
+        receiver_country=request.receiver_country,
+    )
+
+    result = evaluate(transaction)
+
+    return {
+        "recipient": {
+            "recipient_id": recipient["recipient_id"],
+            "display_name": recipient["display_name"],
+            "directory": recipient["directory"],
+            "verification_level": recipient["verification_level"],
+            "identity_verified": False,
+            "email_ownership_status": recipient.get(
+                "email_ownership_status", "UNVERIFIED"
+            ),
+            "phone_ownership_status": recipient.get(
+                "phone_ownership_status", "UNVERIFIED"
+            ),
+            "contact_verification_status": recipient.get(
+                "contact_verification_status", "UNVERIFIED"
+            ),
+            "recipient_confirmation": "EMAIL_AND_PHONE_OWNERSHIP_VERIFIED",
+            "confirmation_limits": {
+                "email_ownership_verified": True,
+                "phone_ownership_verified": True,
+                "real_world_identity_verified": False,
+                "payment_authorized": False,
+                "funds_moved": False,
+            },
+        },
+        "risk_assessment": result,
+        "payment_authorized": False,
+        "funds_moved": False,
+        "mode": "SANDBOX_RISK_ASSESSMENT_ONLY",
+    }
+
+
+@app.post("/v1/payment-requests/by-email")
+def create_payment_request_by_email(
+    request: recipient_directory.EmailPaymentRequest,
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    """Create a persistent email-linked sandbox request; never execute payment."""
+    configured_key = os.environ.get("TRUSTNG_API_KEY")
+
+    if not configured_key:
+        raise HTTPException(
+            status_code=503,
+            detail="Developer API is not configured with an API key.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(x_api_key, configured_key):
+        raise HTTPException(
+            status_code=401,
+            detail="A valid X-API-Key is required.",
+        )
+
+    if not os.environ.get("DATABASE_URL"):
+        raise HTTPException(
+            status_code=503,
+            detail="Persistent payment requests require DATABASE_URL.",
+        )
+
+    try:
+        recipient = recipient_directory.lookup_recipient(
+            request.recipient_email
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    if recipient is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Recipient not found.",
+        )
+
+    if recipient.get("contact_verification_status") != "FULLY_VERIFIED":
+        raise HTTPException(
+            status_code=409,
+            detail="Recipient email and assigned phone must both be verified.",
+        )
+
+    transaction = Transaction(
+        transaction_id=request.request_id,
+        sender=request.sender,
+        receiver=recipient["recipient_id"],
+        asset=request.asset,
+        amount=request.amount,
+        channel=request.channel,
+        country=request.country,
+        device_id=request.device_id,
+        sender_country=request.sender_country,
+        receiver_country=request.receiver_country,
+    )
+
+    risk_assessment = evaluate(transaction)
+
+    try:
+        saved = database.create_email_payment_request(
+            request_id=request.request_id,
+            sender_id=request.sender,
+            recipient_id=recipient["recipient_id"],
+            recipient_email=request.recipient_email,
+            asset=request.asset,
+            amount=request.amount,
+            channel=request.channel,
+            country=request.country,
+            risk_assessment=risk_assessment,
+            device_id=request.device_id,
+            sender_country=request.sender_country,
+            receiver_country=request.receiver_country,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    return {
+        "request": {
+            "request_id": saved["request_id"],
+            "status": saved["status"],
+            "created": saved["created"],
+        },
+        "recipient": {
+            "recipient_id": recipient["recipient_id"],
+            "display_name": recipient["display_name"],
+            "email_ownership_status": "VERIFIED",
+            "phone_ownership_status": "VERIFIED",
+        },
+        "risk_assessment": saved["risk_assessment"],
+        "payment_authorized": False,
+        "funds_moved": False,
+        "mode": "SANDBOX_REQUEST_ONLY",
+    }
+
+
 @app.post("/v1/account-trust/otp/start")
 def account_trust_otp_start(
     request: account_trust_check.AccountTrustOTPStartRequest,
@@ -815,7 +1254,7 @@ async def protect_internal_routes(request, call_next):
         "/terminal",
     }
 
-    if request.url.path in public_paths:
+    if request.url.path in public_paths or request.url.path in {"/assets", "/dijuang", "/trustng"} or request.url.path.startswith(("/assets/", "/dijuang/", "/trustng/")):
         return await call_next(request)
 
     configured_key = os.environ.get("TRUSTNG_API_KEY")
@@ -894,6 +1333,35 @@ def trustng_terminal():
     from pathlib import Path
     terminal_path = Path(__file__).resolve().with_name("terminal.html")
     return HTMLResponse(content=terminal_path.read_text(encoding="utf-8"))
+
+
+
+@app.get("/v1/terminal/corridors")
+def terminal_corridors(limit: int = 100):
+    """Return aggregated, read-only transaction corridor intelligence."""
+    if not 1 <= limit <= 500:
+        raise HTTPException(
+            status_code=400,
+            detail="limit must be between 1 and 500",
+        )
+
+    try:
+        corridors = database.get_transaction_corridor_summary(limit=limit)
+    except (RuntimeError, database.psycopg.Error):
+        raise HTTPException(
+            status_code=503,
+            detail="Corridor intelligence is temporarily unavailable.",
+        )
+
+    return {
+        "source": "processed_transactions",
+        "count": len(corridors),
+        "items": corridors,
+        "read_only": True,
+        "payment_authorized": False,
+        "funds_moved": False,
+    }
+
 
 @app.get("/v1/terminal/transactions")
 def terminal_transactions(limit: int = 50):
