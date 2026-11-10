@@ -821,7 +821,7 @@ async def protect_internal_routes(request, call_next):
         "/terminal",
     }
 
-    if request.url.path in public_paths:
+    if request.url.path in public_paths or request.url.path in {"/assets", "/dijuang", "/trustng"} or request.url.path.startswith(("/assets/", "/dijuang/", "/trustng/")):
         return await call_next(request)
 
     configured_key = os.environ.get("TRUSTNG_API_KEY")
