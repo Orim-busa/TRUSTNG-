@@ -1,0 +1,15 @@
+[
+  {
+    "source_name": "Saudi Central Bank - Cyber Security Framework",
+    "source_url": "https://rulebook.sama.gov.sa/en/cyber-security-framework-2",
+    "capability": "api_security",
+    "observation": "Review TrustNG API-key enforcement, credential rotation, and route-level access controls against relevant official guidance.",
+    "evidence_status": "NEEDS_REVIEW",
+    "notes": "Source passage captured for architecture benchmarking. Compare with TrustNG's implemented API-key access controls. This excerpt does not specify API-key rotation requirements. Evidence remains unverified.",
+    "document_title": "Cyber Security Framework",
+    "publication_date": "2017-05-24",
+    "document_section": "3.3.5 Identity and Access Management; 3.2.4 Cyber Security Review",
+    "evidence_excerpt": "The Member Organization should restrict access to its information assets in line with their business requirements based on the need-to-have or need-to-know principles.",
+    "evidence_reference": "Official SAMA Rulebook, section 3.3.5. Section 3.2.4 also provides review criteria for critical and internet-facing services. Applicability to TrustNG has not been established."
+  }
+]

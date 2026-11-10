@@ -66,6 +66,14 @@ RESEARCH_SOURCES = [
         "source_type": "regulatory_authority",
     },
     {
+        "name": "Saudi Central Bank - Cyber Security Framework",
+        "url": "https://rulebook.sama.gov.sa/en/cyber-security-framework-2",
+        "jurisdiction": "Saudi Arabia",
+        "region": "international",
+        "topic": "banking_payments_cybersecurity",
+        "source_type": "regulatory_authority",
+    },
+    {
         "name": "Central Bank of the UAE - Open Finance Regulation",
         "url": "https://rulebook.centralbank.ae/en/rulebook/open-finance-regulation",
         "jurisdiction": "United Arab Emirates",

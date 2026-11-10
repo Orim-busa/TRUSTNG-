@@ -1,0 +1,1196 @@
+[
+  {
+    "candidate_id": "94200bda6e52d2169307c1db798f6587e2b7bb55d8b97bcf387465dca2a30abe",
+    "title": "When machines attack: frontier AI cyber threats and policy responses in the financial sector",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/fsi-paper-28-when-machines-attack-frontier-ai-cyber-threats-and-policy-responses-financial-sector",
+    "published_at_source": "2026-09-09T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 22,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "ai_and_machine_learning",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "vulnerability",
+      "threat",
+      "artificial intelligence",
+      "frontier ai",
+      "incident response"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "fbfa52177ee528e6d325a393f358fcec1c7ac6f963f62d104634ef2e2c02a9ff",
+    "title": "Anjvision YSSD-RTMP-H5",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-272-05",
+    "published_at_source": "Tue, 29 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 19,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "fraud_and_financial_crime",
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "forgery",
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "fad0f7b297536f4dc05ffe78f819f2fc19fb3a34ff72df8bd344db58f298fb33",
+    "title": "Grid Protection Alliance openPDC and openHistorian",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-281-02",
+    "published_at_source": "Thu, 08 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 19,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "fraud_and_financial_crime",
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "forgery",
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "32e4df0c22cff8b8fe6e1c50f4559caffe3d5c15828a75444e8225d452ae7856",
+    "title": "CISA Malcolm",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-254-01",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 19,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "fraud_and_financial_crime",
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "forgery",
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "4325786426012c6906d0d017adf2d0da5c99c4f12657dbcc3e45f804590c96c2",
+    "title": "MikroTik RouterOS",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-272-06",
+    "published_at_source": "Tue, 29 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 17,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "privacy_and_data",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "authentication",
+      "privacy",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "70be64174d6579c03959f3eb52a8e9fe07eaceac29dbef046b0928ca119ed54b",
+    "title": "Savannah lwIP SMTP client",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-02",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 17,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "privacy_and_data",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "privacy",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "3bf96eac7c2fcc853c44150a60dd40091ba4d3e668a31b77994e621d0e1d3830",
+    "title": "Hitachi Energy SOI",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-04",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 17,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "privacy_and_data",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "confidentiality",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "bce52ccd711d90ffe990e0d813b3389912f53b04f847a4f44dfb7dd98dc336bd",
+    "title": "Hitachi Energy Asset Suite",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-03",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 17,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "privacy_and_data",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "authentication",
+      "confidentiality",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "faadc0b2b19a69a47a7e7c92db847ad0668563931cbe9460778279316961b7b2",
+    "title": "Viidure Dashcam Android Application",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-272-07",
+    "published_at_source": "Tue, 29 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "credential",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "6c7ec78480f96d0ece508492075feeb5d8973e25c7d2cc5b6d2aa1df4f26ea87",
+    "title": "VIVOTEK Camera Firmware",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-272-03",
+    "published_at_source": "Tue, 29 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "0d3be6b6fae4f063a7ffde2dd5c12d990d8fbd11e204a605de7ed5db8c9f4bfe",
+    "title": "Swann Communications SWIFI-SE2KIC",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-286-02",
+    "published_at_source": "Tue, 13 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "9a5d4539ca389a362be4f382984d63dd7470c9ab0f1c344706149e57c70e0294",
+    "title": "Inductive Automation Ignition Software",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-286-01",
+    "published_at_source": "Tue, 13 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "30b52d2fc768757d96520c12d8ec4eff46e677ce8ffdd10024e26d8becb58277",
+    "title": "Johnson Controls EasyIO FG",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-01",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "db461caabe0c965b4b2da3f4131ff2d55989c649400cc88155d847e9010220bc",
+    "title": "Hitachi Energy RTU500",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-06",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "authentication",
+      "access control",
+      "threat",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "4f0c5d36cee9553573f2831ed093675afe71af2a433485aac0a8f3a77eb95afa",
+    "title": "Hitachi Energy REB500",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-279-05",
+    "published_at_source": "Tue, 06 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "4c82948f2fde3b15985fff21e688c23c150f6b6bc18d5f5271196babdd034852",
+    "title": "Satel Netco Design",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-281-03",
+    "published_at_source": "Thu, 08 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "f58da9be9c2cd90399cce5d8700d4f2c042ba392d05da8d5b08353662d8b3446",
+    "title": "Red Lion Controls N-Tron 700 Series",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-281-01",
+    "published_at_source": "Thu, 08 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "bf1d7ae18b6dedeccb8433bc918998660733677fb2121b7702e8dd81ae0ecc16",
+    "title": "Chinese Government-linked Cyber Threat Actors Combine Automated and Hands-on Hacking Tools to Steal Sensitive Data",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/cybersecurity-advisories/aa26-281a",
+    "published_at_source": "Thu, 08 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "threat",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "dcf8afe15256d1c72bf6820ba5c829050eb44f02fe2c6b5995cf4aad0af066e6",
+    "title": "Monta monta.app",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-02",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "4c487f67fda0a5c184bd4e63addeb87f09fb9d4a31fd644014b57e567ed466c7",
+    "title": "Meari IoT Cloud Platform OpenAPI Service",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-06",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "b39ff47a9d6f32cc274e83eb97f5ca59d2dac97789ce2ff463b5745a6e12a28e",
+    "title": "Johnson Controls EasyIO Neo Series EC and CW Controllers",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-04",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "access control",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "af342dacbe59b3d29584db4ad8fb09d7f56ee748aab7b4fe681fda570b95d2b6",
+    "title": "Johnson Controls EasyIO Neo Series EC and CW Controllers",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-05",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "9bacd2ea82527c907141bc44459e8b59563e90c3cd98f90dfeddef3a3dc7b7e5",
+    "title": "Armatura LLC Armatura One",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-01",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "e6c25c75b7ceaa11abff0d5e1f719b2d7a4f4e383a552c2a0a5bc1c1a252a956",
+    "title": "ABB Protection and Control IED Manager PCM600",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/ics-advisories/icsa-26-274-03",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 14,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity",
+      "infrastructure_and_resilience"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "authentication",
+      "infrastructure"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "13e00ab44d20734e77ec89e1467f6ea0918bca60fda92b72cbd542a57603a4b7",
+    "title": "CISA Adds One Known Exploited Vulnerability to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/09/30/cisa-adds-one-known-exploited-vulnerability-catalog",
+    "published_at_source": "Wed, 30 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "494ffde2d5ef60f281af3d43572c9a34bc86370eaf8babf3fd5cbf900202bed3",
+    "title": "CISA Adds One Known Exploited Vulnerability to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/09/29/cisa-adds-one-known-exploited-vulnerability-catalog",
+    "published_at_source": "Tue, 29 Sep 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "0b5b8a5c7759b503f6d27900f3c8f823c0f05a85a5f94671f0b1388e8ca0d8bc",
+    "title": "CISA Urges Patching Newly Exploited Vulnerability in Ivanti Connect Secure",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/10/13/cisa-urges-patching-newly-exploited-vulnerability-ivanti-connect-secure",
+    "published_at_source": "Tue, 13 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "credential",
+      "authentication",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "897e03545f1ebc4d33027ec20cc8222bcfc67f119746ebc69d99e058ff39bd7e",
+    "title": "CISA Adds Two Known Exploited Vulnerabilities to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/10/13/cisa-adds-two-known-exploited-vulnerabilities-catalog",
+    "published_at_source": "Tue, 13 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "authentication",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "176ef43f137e903d04f8ebc414efef4fd8fd7f104120f19f5040167cd0b72caa",
+    "title": "CISA Adds One Known Exploited Vulnerability to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/10/01/cisa-adds-one-known-exploited-vulnerability-catalog",
+    "published_at_source": "Thu, 01 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "f9b447af38c377a8babe7469cbb51e47e67e639f92dd0516deed6ba1d12f81ee",
+    "title": "CISA Adds One Known Exploited Vulnerability to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/10/04/cisa-adds-one-known-exploited-vulnerability-catalog",
+    "published_at_source": "Sun, 04 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "0ed309bdb2fbe9f488806885d3bdb364aea70bf9ab207e0a3dc56f3cf53bfb05",
+    "title": "CISA Adds Two Known Exploited Vulnerabilities to Catalog",
+    "source_name": "CISA Cybersecurity Advisories",
+    "source_region": "international",
+    "article_url": "https://www.cisa.gov/news-events/alerts/2026/10/02/cisa-adds-two-known-exploited-vulnerabilities-catalog",
+    "published_at_source": "Fri, 02 Oct 26 12:00:00 +0000",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 12,
+    "suggested_priority": "high",
+    "matched_categories": [
+      "cybersecurity"
+    ],
+    "matched_terms": [
+      "cyber",
+      "security",
+      "vulnerability",
+      "threat"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "6b687797ce667749e87c2a89753940120c8a4a74aaeef15a0c84f6deca5539ad",
+    "title": "Are stablecoins and bank deposits substitutes?",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1382-are-stablecoins-and-bank-deposits-substitutes",
+    "published_at_source": "2026-10-13T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 7,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "payments_and_transactions",
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "stablecoin",
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "8e0d8b636937920b5a6d1dd90f8f1e2839841784f55a32c13cac2de3b865b0eb",
+    "title": "Artificial intelligence and climate change: balancing innovation and sustainability",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/paper-174-artificial-intelligence-and-climate-change-balancing-innovation-and-sustainability",
+    "published_at_source": "2026-10-08T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 7,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "ai_and_machine_learning",
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "artificial intelligence",
+      "risk management"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "b0d092a98f6c87c5995091e8e4802b163126170012e51e4b7853d687a22f01c3",
+    "title": "Zombie firms in emerging Asia: domestic and cross border implications",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1375-zombie-firms-emerging-asia-domestic-and-cross-border-implications",
+    "published_at_source": "2026-09-03T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 7,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "payments_and_transactions",
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "cross-border",
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "c26d9c3d073bab5297a4af0680547976b3c0c254e033219f2636cebf649f06b5",
+    "title": "Verifiable official statistics: a blockchain-based approach",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1374-verifiable-official-statistics-blockchain-based-approach",
+    "published_at_source": "2026-09-02T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 7,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "payments_and_transactions",
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "settlement",
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "cb445326c363105c282035b68f1284a9390f73c5441a43c10ce2c0ea9e18ec52",
+    "title": "High public debt, NBFIs and the risk of market dysfunction",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/bulletin-136-high-public-debt-nbfis-and-risk-market-dysfunction",
+    "published_at_source": "2026-09-29T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 6,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "bank",
+      "liquidity"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "d8a45519281acdc27d2f5d20fdebb65ea64d8e005dfb01ff526785aeb9feafa1",
+    "title": "Simple, resilient and proportional: revisiting regulation for small banks",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/fsi-insight-78-simple-resilient-and-proportional-revisiting-regulation-small-banks",
+    "published_at_source": "2026-09-03T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 6,
+    "suggested_priority": "medium",
+    "matched_categories": [
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "banking",
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "053fe98cbb07974bc03c5fb57e2f462e39adf74406f188390ecbbeb5e73f47e4",
+    "title": "Money and the architecture of trust",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/paper-175-money-and-architecture-trust",
+    "published_at_source": "2026-10-14T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 4,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "payments_and_transactions"
+    ],
+    "matched_terms": [
+      "payment"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "180970e1dad456a81be489c943a206a8fad95aa473f4001e9d346819976ab48a",
+    "title": "Circular relationships among AI firms",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/bulletin-137-circular-relationships-among-ai-firms",
+    "published_at_source": "2026-10-01T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 4,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "ai_and_machine_learning"
+    ],
+    "matched_terms": [
+      "artificial intelligence"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "7a941800d447a9b48873903ee78571679ba434de8f248f92e7a23d1e844e645f",
+    "title": "Old workers, young machines: can AI and automation offset population ageing?",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/bulletin-135-old-workers-young-machines-can-ai-and-automation-offset-population-ageing",
+    "published_at_source": "2026-09-24T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 4,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "ai_and_machine_learning"
+    ],
+    "matched_terms": [
+      "artificial intelligence"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "505e06d0f17d0e0d8130e74cfcd701e215ac752c58ae40509c212e563f0eca78",
+    "title": "Hidden by complexity? Measuring stablecoin, crypto and decentralised finance ecosystems",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1377-hidden-complexity-measuring-stablecoin-crypto-and-decentralised-finance-ecosystems",
+    "published_at_source": "2026-09-15T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 4,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "payments_and_transactions"
+    ],
+    "matched_terms": [
+      "stablecoin"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "2b4d37ed73cf00f6f2d4933859e2dd633842ae25d095ce9839bf8c3393de33d3",
+    "title": "Core Principles for Effective Deposit Insurance Systems – Executive Summary",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/core-principles-effective-deposit-insurance-systems-executive-summary",
+    "published_at_source": "2026-09-30T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 3,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "financial stability"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "687bce93f7c6c857699d7088dc4968083c769ec5d9770270e608698aea4c6be6",
+    "title": "Trusted execution environments for central banks",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/paper-173-trusted-execution-environments-central-banks",
+    "published_at_source": "2026-09-25T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 3,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "d9820c350bfe9951520931c3ced41a5355cf5d933e79f1a1eb3fb271bc46a217",
+    "title": "What determines banks' excess demand for reserves?",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1376-what-determines-banks-excess-demand-reserves",
+    "published_at_source": "2026-09-07T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 3,
+    "suggested_priority": "low",
+    "matched_categories": [
+      "risk_and_banking"
+    ],
+    "matched_terms": [
+      "bank"
+    ],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "4813b455f5a2c1e65c15a41157b89617450632e8a9878998722291e3010a667e",
+    "title": "Transformative AI and demand bottlenecks",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1381-transformative-ai-and-demand-bottlenecks",
+    "published_at_source": "2026-10-12T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "176227c0d0e5ae0bea217df60a0ddef747804450b7ce79dd1640511456fd85db",
+    "title": "Chasing El Dorado: gold under shifting geopolitical and financial conditions",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1380-chasing-el-dorado-gold-under-shifting-geopolitical-and-financial-condition",
+    "published_at_source": "2026-10-06T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "82895607e25b8203f488db6d5d913d20244e4a8052647a91b2147572f186243c",
+    "title": "The leverage ratio and the output floor: complementarities and overlaps",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/fsi-paper-29-leverage-ratio-and-output-floor-complementarities-and-overlaps",
+    "published_at_source": "2026-09-28T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "ade93f7dc32c495a9a0bdf4e936c204ed3f41e9aa0d740ef42c4bbb40ad22aa2",
+    "title": "Unraveling the cobweb of global imbalances: drivers, vulnerabilities, and adjustment scenarios",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1379-unraveling-cobweb-global-imbalances-drivers-vulnerabilities-and-adjustment-scenarios",
+    "published_at_source": "2026-09-23T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "abed8baa4fc7451a74f84207497b5acd65f78a620a2cb35759b76010d1312b3d",
+    "title": "Maritime chokepoints and the global economy: evidence from the Strait of Hormuz",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/working-paper-1378-maritime-chokepoints-and-the-global-economy-evidence-strait-hormuz",
+    "published_at_source": "2026-09-17T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  },
+  {
+    "candidate_id": "f614e1ea46a04747af6c97f04ccaa6af2a485f05319e36bd02a694fef65f4e33",
+    "title": "BIS Quarterly Review, September 2026",
+    "source_name": "BIS Research Papers",
+    "source_region": "international",
+    "article_url": "https://www.bis.org/publications/qr-202609",
+    "published_at_source": "2026-09-14T00:00:00Z",
+    "review_status": "unreviewed",
+    "evidence_status": "not_verified",
+    "relevance_score": 0,
+    "suggested_priority": "low",
+    "matched_categories": [],
+    "matched_terms": [],
+    "human_review_required": true,
+    "verification_claimed": false,
+    "implementation_authorized": false
+  }
+]

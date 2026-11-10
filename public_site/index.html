@@ -133,14 +133,39 @@
       font-size: .9rem;
     }
   </style>
+<style>
+
+/* Accessibility: skip navigation */
+.skip-link {
+  transition: none;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10000;
+  padding: 12px 18px;
+  background: #ffffff;
+  color: #101b24;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  font-weight: 700;
+  transform: translateY(-160%);
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+</style>
 </head>
 
 <body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
   <header>
     <div class="wrap brand">TrustNG<span style="color:#5ee0b0">.</span></div>
   </header>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <section class="hero wrap">
       <div class="eyebrow">Transaction trust infrastructure</div>
 

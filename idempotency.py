@@ -15,7 +15,7 @@ def database_mode_enabled():
 
 
 def create_transaction_fingerprint(transaction):
-    return (
+    fingerprint = (
         transaction.transaction_id,
         transaction.sender,
         transaction.receiver,
@@ -25,6 +25,17 @@ def create_transaction_fingerprint(transaction):
         transaction.country.upper(),
         transaction.device_id,
     )
+
+    if (
+        transaction.sender_country is not None
+        and transaction.receiver_country is not None
+    ):
+        fingerprint += (
+            transaction.sender_country,
+            transaction.receiver_country,
+        )
+
+    return fingerprint
 
 
 def check_transaction(transaction_id):

@@ -55,7 +55,14 @@ def test_initialize_database_creates_required_tables(monkeypatch):
         for statement in executed_statements
     )
 
-
+    assert any(
+        "ADD COLUMN IF NOT EXISTS sender_country" in statement
+        for statement in executed_statements
+    )
+    assert any(
+        "ADD COLUMN IF NOT EXISTS receiver_country" in statement
+        for statement in executed_statements
+    )
 def test_check_database_connection_returns_true(monkeypatch):
     class FakeConnection:
         def __enter__(self):
@@ -706,3 +713,22 @@ def test_list_recent_processed_transactions_rejects_invalid_limit():
     for value in (0, -1, 101, True, "10"):
         with pytest.raises(ValueError):
             database.list_recent_processed_transactions(limit=value)
+def test_email_payment_request_requires_both_corridor_countries():
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="must be supplied together",
+    ):
+        database.create_email_payment_request(
+            request_id="REQ-TEST-001",
+            sender_id="sender-001",
+            recipient_id="recipient-001",
+            recipient_email="recipient@example.com",
+            asset="USD",
+            amount=100,
+            channel="EMAIL",
+            country="NG",
+            risk_assessment={"status": "REVIEW"},
+            sender_country="NG",
+        )
