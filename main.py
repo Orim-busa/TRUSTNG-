@@ -29,7 +29,7 @@ import dashboard_service
 import account_trust_check as account_trust_check
 import research_promotion
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -1252,6 +1252,7 @@ async def protect_internal_routes(request, call_next):
         "/redoc",
         "/docs/oauth2-redirect",
         "/terminal",
+        "/v1/partnership-enquiries",
     }
 
     if request.url.path in public_paths or request.url.path in {"/assets", "/dijuang", "/trustng"} or request.url.path.startswith(("/assets/", "/dijuang/", "/trustng/")):
@@ -1308,6 +1309,7 @@ def custom_openapi():
         "/",
         "/v1/health",
         "/dashboard",
+        "/v1/partnership-enquiries",
     }
 
     for path, methods in schema.get("paths", {}).items():
@@ -1420,4 +1422,149 @@ def terminal_transactions(limit: int = 50):
         "limit": limit,
         "items": items,
         "read_only": True,
+    }
+
+
+# DIJUANG public partnership enquiry submission.
+@app.post("/v1/partnership-enquiries")
+async def submit_partnership_enquiry(request: Request):
+    """Accept and securely store a DIJUANG partnership enquiry."""
+    import re
+    import uuid
+    from starlette.responses import JSONResponse
+
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Please submit a valid form.")
+
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail="Invalid submission.")
+
+    # Honeypot field: ordinary visitors should leave this empty.
+    if str(payload.get("website", "")).strip():
+        raise HTTPException(status_code=400, detail="Submission rejected.")
+
+    required = ("full_name", "business_email", "organisation",
+                "partnership_type", "purpose")
+    values = {}
+
+    for field in required:
+        value = payload.get(field)
+        if not isinstance(value, str) or not value.strip():
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field.replace('_', ' ').capitalize()} is required.",
+            )
+        values[field] = value.strip()
+
+    optional = ("position", "phone", "country", "other_interest")
+    for field in optional:
+        value = payload.get(field, "")
+        if not isinstance(value, str):
+            raise HTTPException(status_code=422, detail="Invalid form field.")
+        values[field] = value.strip()
+
+    limits = {
+        "full_name": 120,
+        "business_email": 254,
+        "organisation": 180,
+        "position": 120,
+        "phone": 50,
+        "country": 100,
+        "partnership_type": 80,
+        "other_interest": 180,
+        "purpose": 3000,
+    }
+    for field, limit in limits.items():
+        if len(values[field]) > limit:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field.replace('_', ' ').capitalize()} is too long.",
+            )
+
+    email = values["business_email"].lower()
+    if not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]{2,}", email):
+        raise HTTPException(
+            status_code=422,
+            detail="Please enter a valid business email address.",
+        )
+
+    allowed_types = {
+        "Strategic partnership",
+        "Financial institution",
+        "Technology / API integration",
+        "Investment / funding",
+        "Research / innovation",
+        "Distribution / commercial",
+        "Other",
+    }
+    if values["partnership_type"] not in allowed_types:
+        raise HTTPException(
+            status_code=422,
+            detail="Please select a valid partnership type.",
+        )
+
+    if values["partnership_type"] == "Other" and not values["other_interest"]:
+        raise HTTPException(
+            status_code=422,
+            detail="Please specify your partnership interest.",
+        )
+
+    reference = "DJ-" + uuid.uuid4().hex[:10].upper()
+    submission_id = str(uuid.uuid4())
+
+    try:
+        database.create_partnership_enquiry(
+            submission_id=submission_id,
+            reference=reference,
+            full_name=values["full_name"],
+            business_email=email,
+            organisation=values["organisation"],
+            position=values["position"] or None,
+            phone=values["phone"] or None,
+            country=values["country"] or None,
+            partnership_type=values["partnership_type"],
+            other_interest=values["other_interest"] or None,
+            purpose=values["purpose"],
+        )
+    except Exception:
+        logger.exception("DIJUANG partnership enquiry could not be stored.")
+        raise HTTPException(
+            status_code=503,
+            detail="We could not receive your enquiry right now. Please try again later.",
+        )
+
+    return JSONResponse(
+        status_code=201,
+        content={
+            "success": True,
+            "reference": reference,
+            "message": "Your partnership enquiry has been received. Please keep your reference number.",
+        },
+    )
+
+
+@app.get("/v1/admin/partnership-enquiries")
+def admin_list_partnership_enquiries(limit: int = 50):
+    """List DIJUANG partnership enquiries; protected by the API-key middleware."""
+    if not 1 <= limit <= 100:
+        raise HTTPException(
+            status_code=400,
+            detail="limit must be between 1 and 100",
+        )
+
+    try:
+        enquiries = database.list_recent_partnership_enquiries(limit=limit)
+    except (RuntimeError, ValueError, database.psycopg.Error):
+        logger.exception("DIJUANG partnership enquiry listing is unavailable.")
+        raise HTTPException(
+            status_code=503,
+            detail="Partnership enquiries are temporarily unavailable.",
+        )
+
+    return {
+        "count": len(enquiries),
+        "limit": limit,
+        "items": enquiries,
     }

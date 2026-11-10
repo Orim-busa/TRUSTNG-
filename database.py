@@ -267,6 +267,33 @@ def initialize_database():
         )
 
 
+        # DIJUANG partnership enquiries are stored separately from transaction data.
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS partnership_enquiries (
+                submission_id TEXT PRIMARY KEY,
+                reference TEXT NOT NULL UNIQUE,
+                full_name TEXT NOT NULL,
+                business_email TEXT NOT NULL,
+                organisation TEXT NOT NULL,
+                position TEXT,
+                phone TEXT,
+                country TEXT,
+                partnership_type TEXT NOT NULL,
+                other_interest TEXT,
+                purpose TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_partnership_enquiries_created
+            ON partnership_enquiries (created_at DESC)
+            """
+        )
+
+
 def create_email_payment_request(
     request_id,
     sender_id,
@@ -1404,3 +1431,79 @@ def confirm_recipient_email_verification(email, email_code, phone_code):
     if result is None:
         raise ValueError("Contact verification could not be completed.")
     return result
+
+
+def create_partnership_enquiry(
+    submission_id,
+    reference,
+    full_name,
+    business_email,
+    organisation,
+    position,
+    phone,
+    country,
+    partnership_type,
+    other_interest,
+    purpose,
+):
+    """Save a DIJUANG partnership enquiry without exposing it publicly."""
+    with get_database_connection() as connection:
+        connection.execute(
+            """
+            INSERT INTO partnership_enquiries (
+                submission_id, reference, full_name, business_email,
+                organisation, position, phone, country,
+                partnership_type, other_interest, purpose
+            )
+            VALUES (
+                %(submission_id)s, %(reference)s, %(full_name)s,
+                %(business_email)s, %(organisation)s, %(position)s,
+                %(phone)s, %(country)s, %(partnership_type)s,
+                %(other_interest)s, %(purpose)s
+            )
+            """,
+            {
+                "submission_id": submission_id,
+                "reference": reference,
+                "full_name": full_name,
+                "business_email": business_email,
+                "organisation": organisation,
+                "position": position,
+                "phone": phone,
+                "country": country,
+                "partnership_type": partnership_type,
+                "other_interest": other_interest,
+                "purpose": purpose,
+            },
+        )
+
+
+def list_recent_partnership_enquiries(limit=50):
+    """Return recent DIJUANG partnership enquiries for authenticated staff."""
+    if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
+        raise ValueError("limit must be an integer between 1 and 100")
+
+    with get_database_connection() as connection:
+        rows = connection.execute(
+            """
+            SELECT reference, full_name, business_email, organisation,
+                   position, phone, country, partnership_type,
+                   other_interest, purpose, created_at
+            FROM partnership_enquiries
+            ORDER BY created_at DESC
+            LIMIT %s
+            """,
+            (limit,),
+        ).fetchall()
+
+    return [
+        {
+            **{key: row[key] for key in (
+                "reference", "full_name", "business_email", "organisation",
+                "position", "phone", "country", "partnership_type",
+                "other_interest", "purpose",
+            )},
+            "created_at": row["created_at"].isoformat(),
+        }
+        for row in rows
+    ]
