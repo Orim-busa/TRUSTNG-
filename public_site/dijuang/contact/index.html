@@ -3,10 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="We welcome relevant conversations with institutions, technology partners, researchers and people interested in our work.">
+<meta name="description" content="Contact DIJUANG about strategic, technology, financial institution, investment and research partnerships.">
 <meta name="theme-color" content="#101b24">
-<title>Contact DIJUANG | DIJUANG</title>
+<title>Partnership Enquiries | DIJUANG</title>
 <link rel="stylesheet" href="/assets/dijuang.css">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -33,24 +34,127 @@
 
 <main class="shell company-page" id="main-content" tabindex="-1">
 <section class="company-hero">
-<div class="eyebrow">Start a conversation / DIJUANG</div>
-<h1>Contact DIJUANG</h1>
-<p class="company-lead">We welcome relevant conversations with institutions, technology partners, researchers and people interested in our work.</p>
-<div class="company-actions">
-<a class="button button-primary" href="/dijuang/products/">Explore our work</a>
-<a class="button button-outline" href="/dijuang/contact/">Contact DIJUANG</a>
+<div class="eyebrow">Partnerships / DIJUANG</div>
+<h1>Let's build meaningful partnerships.</h1>
+<p class="company-lead">DIJUANG welcomes conversations with financial institutions, technology companies, investors, researchers and organisations working towards a stronger African innovation ecosystem. Tell us about your organisation and what you would like to explore.</p>
+</section>
+
+<section class="company-card" aria-labelledby="partnership-form-title" style="max-width:850px;margin:0 auto 70px;">
+<h2 id="partnership-form-title">Partnership enquiry</h2>
+<p style="margin-bottom:24px;">Fields marked * are required. Your information will be used to review and respond to this enquiry.</p>
+
+<form id="partnershipForm">
+<div class="partnership-fields">
+<label>Full name *<input name="full_name" autocomplete="name" maxlength="120" required></label>
+<label>Business email *<input name="business_email" type="email" autocomplete="email" maxlength="254" required></label>
+<label>Organisation / company *<input name="organisation" autocomplete="organization" maxlength="180" required></label>
+<label>Position / job title<input name="position" autocomplete="organization-title" maxlength="120"></label>
+<label>Phone / WhatsApp<input name="phone" type="tel" autocomplete="tel" maxlength="50"></label>
+<label>Country<input name="country" autocomplete="country-name" maxlength="100"></label>
+<label class="partnership-full">Nature of partnership *
+<select name="partnership_type" id="partnershipType" required>
+<option value="">Select a partnership area</option>
+<option>Strategic partnership</option>
+<option>Financial institution</option>
+<option>Technology / API integration</option>
+<option>Investment / funding</option>
+<option>Research / innovation</option>
+<option>Distribution / commercial</option>
+<option>Other</option>
+</select></label>
+<label class="partnership-full" id="otherInterestField" hidden>Please specify your partnership interest *
+<input name="other_interest" id="otherInterest" maxlength="180"></label>
+<label class="partnership-full">Purpose of enquiry *
+<textarea name="purpose" rows="6" maxlength="3000" required placeholder="Briefly describe your organisation, what you would like to discuss and the outcome you are exploring."></textarea></label>
 </div>
+
+<div class="partnership-full" style="margin:18px 0;">
+<div class="cf-turnstile"
+     data-sitekey="0x4AAAAAAF8Gk-x1n4YM9qnV"
+     data-action="partnership_enquiry"></div>
+</div>
+
+<div class="partnership-trap" aria-hidden="true">
+<label>Leave this field empty<input name="website" tabindex="-1" autocomplete="off"></label>
+</div>
+
+<p class="partnership-privacy">By submitting this form, you agree that DIJUANG may use the information provided to assess and respond to this partnership enquiry. Please do not include passwords, financial account credentials or sensitive personal information.</p>
+<button class="button button-primary" id="partnershipSubmit" type="submit">Submit partnership enquiry</button>
+<p id="partnershipMessage" role="status" aria-live="polite" style="margin-top:18px;"></p>
+</form>
 </section>
-<section class="company-grid" aria-label="Contact DIJUANG information">
-<article class="company-card"><h2>Institutional and business enquiries</h2><p>For organisations interested in learning about DIJUANG, understanding TrustNG or discussing a potential collaboration.</p></article><article class="company-card"><h2>Technology and research</h2><p>For developers, researchers and technology organisations interested in exchanging ideas or exploring a relevant technical discussion.</p></article><article class="company-card"><h2>Media and general enquiries</h2><p>For questions about the company, its direction or future public information.</p></article><article class="company-card"><h2>Official contact channel</h2><p>Our official email address and contact form will be published after the company domain and message-delivery arrangements have been configured. We do not publish an unverified email address.</p></article>
-</section>
+
 <section class="company-bottom">
 <div class="eyebrow">DIJUANG</div>
 <h2>Technology with protection at its foundation.</h2>
 <p>Built around what matters. One meaningful solution at a time.</p>
-<a class="button button-primary" href="/trustng/">Discover TrustNG</a>
+<a class="button button-outline" href="/trustng/">Discover TrustNG</a>
 </section>
 </main>
+
+<style>
+.partnership-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:26px 0}
+.partnership-fields label{display:flex;flex-direction:column;gap:9px;color:var(--paper);font-size:14px}
+.partnership-fields input,.partnership-fields select,.partnership-fields textarea{width:100%;min-width:0;padding:14px;background:#101b24;color:var(--paper);border:1px solid rgba(255,255,255,.2);border-radius:3px;font:inherit}
+.partnership-fields input:focus,.partnership-fields select:focus,.partnership-fields textarea:focus{outline:2px solid var(--gold-light);outline-offset:2px}
+.partnership-fields textarea{resize:vertical}
+.partnership-full{grid-column:1/-1}
+.partnership-privacy{font-size:13px;color:#b7c1c2;line-height:1.7;margin:20px 0}
+.partnership-trap{position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden}
+@media(max-width:650px){.partnership-fields{grid-template-columns:1fr}.partnership-full{grid-column:auto}}
+</style>
+
+<script>
+(() => {
+  const form = document.getElementById("partnershipForm");
+  const type = document.getElementById("partnershipType");
+  const otherField = document.getElementById("otherInterestField");
+  const otherInput = document.getElementById("otherInterest");
+  const message = document.getElementById("partnershipMessage");
+  const button = document.getElementById("partnershipSubmit");
+
+  type.addEventListener("change", () => {
+    const show = type.value === "Other";
+    otherField.hidden = !show;
+    otherInput.required = show;
+    if (!show) otherInput.value = "";
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    message.textContent = "";
+    button.disabled = true;
+    button.textContent = "Submitting…";
+
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const response = await fetch("/v1/partnership-enquiries", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data)
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.detail || "Your enquiry could not be submitted.");
+      }
+
+      form.reset();
+      otherField.hidden = true;
+      otherInput.required = false;
+      message.textContent = result.message + " Reference: " + result.reference;
+      message.style.color = "#b9dfc8";
+    } catch (error) {
+      message.textContent = error.message || "We could not submit your enquiry. Please try again.";
+      message.style.color = "#f0b4a9";
+    } finally {
+      button.disabled = false;
+      button.textContent = "Submit partnership enquiry";
+    }
+  });
+})();
+</script>
 
 <footer><div class="shell footer-inner">
 <span>© 2026 DIJUANG. All rights reserved.</span>
