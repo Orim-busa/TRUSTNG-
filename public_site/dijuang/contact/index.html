@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#101b24">
 <title>Partnership Enquiries | DIJUANG</title>
 <link rel="stylesheet" href="/assets/dijuang.css">
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -65,6 +66,12 @@
 <input name="other_interest" id="otherInterest" maxlength="180"></label>
 <label class="partnership-full">Purpose of enquiry *
 <textarea name="purpose" rows="6" maxlength="3000" required placeholder="Briefly describe your organisation, what you would like to discuss and the outcome you are exploring."></textarea></label>
+</div>
+
+<div class="partnership-full" style="margin:18px 0;">
+<div class="cf-turnstile"
+     data-sitekey="0x4AAAAAAF8Gk-x1n4YM9qnV"
+     data-action="partnership_enquiry"></div>
 </div>
 
 <div class="partnership-trap" aria-hidden="true">
