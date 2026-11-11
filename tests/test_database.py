@@ -63,6 +63,42 @@ def test_initialize_database_creates_required_tables(monkeypatch):
         "ADD COLUMN IF NOT EXISTS receiver_country" in statement
         for statement in executed_statements
     )
+
+    assert any(
+        "CREATE TABLE IF NOT EXISTS partnership_enquiries" in statement
+        for statement in executed_statements
+    )
+
+    assert any(
+        "submission_id TEXT PRIMARY KEY" in statement
+        and "reference TEXT NOT NULL UNIQUE" in statement
+        and "business_email TEXT NOT NULL" in statement
+        for statement in executed_statements
+    )
+
+    assert any(
+        "CREATE INDEX IF NOT EXISTS idx_partnership_enquiries_created"
+        in statement
+        for statement in executed_statements
+    )
+    assert any(
+        "CREATE TABLE IF NOT EXISTS partnership_rate_limit_events"
+        in statement
+        for statement in executed_statements
+    )
+    assert any(
+        "identifier_hash TEXT NOT NULL" in statement
+        and "created_at TIMESTAMPTZ NOT NULL" in statement
+        for statement in executed_statements
+    )
+    assert any(
+        "idx_partnership_rate_limit_identifier_created" in statement
+        for statement in executed_statements
+    )
+    assert any(
+        "idx_partnership_rate_limit_created" in statement
+        for statement in executed_statements
+    )
 def test_check_database_connection_returns_true(monkeypatch):
     class FakeConnection:
         def __enter__(self):

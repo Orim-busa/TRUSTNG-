@@ -2,6 +2,10 @@
 import logging
 import os
 import secrets
+import uuid
+import httpx
+import hashlib
+import hmac
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -1425,18 +1429,93 @@ def terminal_transactions(limit: int = 50):
     }
 
 
+async def verify_turnstile_token(token):
+    """Verify a Turnstile response with Cloudflare; fail closed on outages."""
+    secret = os.environ.get("TURNSTILE_SECRET_KEY")
+    expected_hostname = os.environ.get("TURNSTILE_EXPECTED_HOSTNAME")
+
+    if (
+        not isinstance(secret, str)
+        or not secret.strip()
+        or not isinstance(expected_hostname, str)
+        or not expected_hostname.strip()
+    ):
+        raise RuntimeError("Turnstile verification is not configured.")
+
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.post(
+                "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+                data={
+                    "secret": secret,
+                    "response": token,
+                    "idempotency_key": str(uuid.uuid4()),
+                },
+            )
+            response.raise_for_status()
+            result = response.json()
+    except (httpx.HTTPError, ValueError):
+        raise RuntimeError("Turnstile verification is unavailable.") from None
+
+    return (
+        isinstance(result, dict)
+        and result.get("success") is True
+        and result.get("action") == "partnership_enquiry"
+        and result.get("hostname") == expected_hostname.strip()
+    )
+
+
 # DIJUANG public partnership enquiry submission.
 @app.post("/v1/partnership-enquiries")
 async def submit_partnership_enquiry(request: Request):
     """Accept and securely store a DIJUANG partnership enquiry."""
+    import json
     import re
     import uuid
     from starlette.responses import JSONResponse
 
+    max_body_bytes = 16 * 1024
+    content_length = request.headers.get("content-length")
+
+    if content_length is not None:
+        try:
+            declared_length = int(content_length)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid request size.",
+            )
+
+        if declared_length < 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid request size.",
+            )
+
+        if declared_length > max_body_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail="Submission is too large.",
+            )
+
+    body = bytearray()
+
+    async for chunk in request.stream():
+        body.extend(chunk)
+
+        if len(body) > max_body_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail="Submission is too large.",
+            )
+
     try:
-        payload = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Please submit a valid form.")
+        payload = json.loads(bytes(body))
+    except (ValueError, UnicodeDecodeError):
+        raise HTTPException(
+            status_code=400,
+            detail="Please submit a valid form.",
+        )
 
     if not isinstance(payload, dict):
         raise HTTPException(status_code=400, detail="Invalid submission.")
@@ -1509,6 +1588,64 @@ async def submit_partnership_enquiry(request: Request):
         raise HTTPException(
             status_code=422,
             detail="Please specify your partnership interest.",
+        )
+
+    turnstile_token = payload.get("cf-turnstile-response")
+    if (
+        not isinstance(turnstile_token, str)
+        or not turnstile_token.strip()
+        or len(turnstile_token) > 2048
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail="Please complete the security verification.",
+        )
+
+    try:
+        verified = await verify_turnstile_token(turnstile_token.strip())
+    except RuntimeError:
+        logger.error("DIJUANG partnership security verification is unavailable.")
+        raise HTTPException(
+            status_code=503,
+            detail="Security verification is temporarily unavailable. Please try again later.",
+        )
+
+    if not verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Security verification failed. Please try again.",
+        )
+
+    # Use a keyed email digest; do not trust unverified forwarded-IP headers.
+    rate_limit_secret = os.environ.get("PARTNERSHIP_RATE_LIMIT_SECRET")
+    if not rate_limit_secret:
+        logger.error("DIJUANG partnership rate limiting is not configured.")
+        raise HTTPException(
+            status_code=503,
+            detail="Enquiry submission is temporarily unavailable. Please try again later.",
+        )
+
+    rate_limit_identifier = hmac.new(
+        rate_limit_secret.encode("utf-8"),
+        email.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    try:
+        rate_limit_allowed = database.consume_partnership_rate_limit(
+            rate_limit_identifier
+        )
+    except Exception:
+        logger.exception("DIJUANG partnership rate-limit check failed.")
+        raise HTTPException(
+            status_code=503,
+            detail="Enquiry submission is temporarily unavailable. Please try again later.",
+        )
+
+    if not rate_limit_allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many enquiries from this email address. Please try again later.",
         )
 
     reference = "DJ-" + uuid.uuid4().hex[:10].upper()
