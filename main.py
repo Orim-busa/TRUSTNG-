@@ -102,7 +102,7 @@ app.mount("/trustng", StaticFiles(directory=Path(__file__).resolve().parent / "p
 
 @app.get("/", response_class=HTMLResponse)
 def home():
-    page = Path(__file__).with_name("index.html")
+    page = Path(__file__).resolve().parent / "public_site" / "dijuang" / "index.html"
     return HTMLResponse(
         content=page.read_text(encoding="utf-8"),
         headers={"Cache-Control": "no-store"},
