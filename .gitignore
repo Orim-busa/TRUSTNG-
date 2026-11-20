@@ -12,3 +12,5 @@ main.py.backup*
 *.swp
 *.backup
 *.before_*
+
+.wrangler/

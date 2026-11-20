@@ -149,6 +149,14 @@
     } catch (error) {
       message.textContent = error.message || "We could not submit your enquiry. Please try again.";
       message.style.color = "#f0b4a9";
+
+      // Turnstile tokens are single-use; require a fresh challenge before retrying.
+      if (
+        window.turnstile &&
+        typeof window.turnstile.reset === "function"
+      ) {
+        window.turnstile.reset();
+      }
     } finally {
       button.disabled = false;
       button.textContent = "Submit partnership enquiry";
