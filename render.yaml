@@ -12,7 +12,7 @@ services:
         sync: false
       - key: TURNSTILE_SECRET_KEY
         sync: false
-      - key: TURNSTILE_EXPECTED_HOSTNAME
-        value: trustng-api.onrender.com
+      - key: TURNSTILE_EXPECTED_HOSTNAMES
+        value: dijuang.com.ng,www.dijuang.com.ng,trustng-api.onrender.com
       - key: PARTNERSHIP_RATE_LIMIT_SECRET
         sync: false
