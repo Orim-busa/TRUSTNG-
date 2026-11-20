@@ -1430,15 +1430,24 @@ def terminal_transactions(limit: int = 50):
 
 
 async def verify_turnstile_token(token):
-    """Verify a Turnstile response with Cloudflare; fail closed on outages."""
+    """Verify a Turnstile response against configured website hostnames."""
     secret = os.environ.get("TURNSTILE_SECRET_KEY")
-    expected_hostname = os.environ.get("TURNSTILE_EXPECTED_HOSTNAME")
+    configured_hostnames = os.environ.get("TURNSTILE_EXPECTED_HOSTNAMES")
+
+    # Backward compatibility with the original single-host configuration.
+    if not configured_hostnames:
+        configured_hostnames = os.environ.get("TURNSTILE_EXPECTED_HOSTNAME", "")
+
+    expected_hostnames = {
+        hostname.strip().lower()
+        for hostname in configured_hostnames.split(",")
+        if hostname.strip()
+    }
 
     if (
         not isinstance(secret, str)
         or not secret.strip()
-        or not isinstance(expected_hostname, str)
-        or not expected_hostname.strip()
+        or not expected_hostnames
     ):
         raise RuntimeError("Turnstile verification is not configured.")
 
@@ -1457,11 +1466,14 @@ async def verify_turnstile_token(token):
     except (httpx.HTTPError, ValueError):
         raise RuntimeError("Turnstile verification is unavailable.") from None
 
+    hostname = result.get("hostname") if isinstance(result, dict) else None
+
     return (
         isinstance(result, dict)
         and result.get("success") is True
         and result.get("action") == "partnership_enquiry"
-        and result.get("hostname") == expected_hostname.strip()
+        and isinstance(hostname, str)
+        and hostname.strip().lower() in expected_hostnames
     )
 
 

@@ -500,3 +500,81 @@ def test_turnstile_verifier_fails_closed_on_http_error(monkeypatch):
 
     with pytest.raises(RuntimeError, match="unavailable"):
         asyncio.run(main.verify_turnstile_token("sample-token"))
+
+
+
+def test_turnstile_verifier_accepts_configured_hostname_list(monkeypatch):
+    import asyncio
+
+    monkeypatch.setenv("TURNSTILE_SECRET_KEY", "test-secret")
+    monkeypatch.setenv(
+        "TURNSTILE_EXPECTED_HOSTNAMES",
+        " dijuang.com.ng, WWW.DIJUANG.COM.NG , trustng-api.onrender.com ",
+    )
+    monkeypatch.delenv("TURNSTILE_EXPECTED_HOSTNAME", raising=False)
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "success": True,
+                "action": "partnership_enquiry",
+                "hostname": "www.dijuang.com.ng",
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return False
+
+        async def post(self, url, data):
+            return FakeResponse()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", FakeAsyncClient)
+
+    assert asyncio.run(main.verify_turnstile_token("sample-token")) is True
+
+
+def test_turnstile_verifier_rejects_hostname_outside_configured_list(monkeypatch):
+    import asyncio
+
+    monkeypatch.setenv("TURNSTILE_SECRET_KEY", "test-secret")
+    monkeypatch.setenv(
+        "TURNSTILE_EXPECTED_HOSTNAMES",
+        "dijuang.com.ng,www.dijuang.com.ng",
+    )
+
+    class FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "success": True,
+                "action": "partnership_enquiry",
+                "hostname": "attacker.example",
+            }
+
+    class FakeAsyncClient:
+        def __init__(self, timeout):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_value, traceback):
+            return False
+
+        async def post(self, url, data):
+            return FakeResponse()
+
+    monkeypatch.setattr(main.httpx, "AsyncClient", FakeAsyncClient)
+
+    assert asyncio.run(main.verify_turnstile_token("sample-token")) is False
